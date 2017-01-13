@@ -22,13 +22,27 @@ const png::rgb_pixel& ImageData::getPixel(std::size_t x, std::size_t y) const
 
 const ImageData::color_type& ImageData::getPixelRed(std::size_t x, std::size_t y) const
 {
-    return getPixel(x,y).red;
+    return getPixel(x, y).red;
 }
+
 const ImageData::color_type& ImageData::getPixelGreen(std::size_t x, std::size_t y) const
 {
-    return getPixel(x,y).green;
+    return getPixel(x, y).green;
 }
+
 const ImageData::color_type& ImageData::getPixelBlue(std::size_t x, std::size_t y) const
 {
-    return getPixel(x,y).blue;
+    return getPixel(x, y).blue;
+}
+
+ImageData::ImageData(std::string filename)
+        : internalImage{}
+{
+    this->loadImage(filename);
+}
+
+ImageData::ImageData()
+        : internalImage{}
+{
+
 }

@@ -9,6 +9,9 @@ class ImageData
 public:
     using color_type = png::byte;
 
+    ImageData();
+    ImageData(std::string filename);
+
     std::size_t getWidth() const;
     std::size_t getHeight() const;
 

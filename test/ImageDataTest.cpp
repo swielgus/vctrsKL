@@ -47,3 +47,29 @@ TEST_F(ImageDataTest, zigzagImageShouldBeLoadedAndVerified)
         EXPECT_EQ(255 * (i % 2), testedData.getPixelBlue(1, i+1));
     }
 }
+
+TEST_F(ImageDataTest, veryDifferentAndVeryCloseColorsShouldBeRecognized)
+{
+    testedData.loadImage("images/4colors.png");
+    unsigned int expectedWidth = 2;
+    unsigned int extectedHeight = 2;
+
+    EXPECT_EQ(expectedWidth, testedData.getWidth());
+    EXPECT_EQ(extectedHeight, testedData.getHeight());
+
+    EXPECT_EQ(255, testedData.getPixelRed(0, 0));
+    EXPECT_EQ(255, testedData.getPixelGreen(0, 0));
+    EXPECT_EQ(255, testedData.getPixelBlue(0, 0));
+
+    EXPECT_EQ(0, testedData.getPixelRed(0, 1));
+    EXPECT_EQ(0, testedData.getPixelGreen(0, 1));
+    EXPECT_EQ(0, testedData.getPixelBlue(0, 1));
+
+    EXPECT_EQ(14, testedData.getPixelRed(1, 0));
+    EXPECT_EQ(155, testedData.getPixelGreen(1, 0));
+    EXPECT_EQ(254, testedData.getPixelBlue(1, 0));
+
+    EXPECT_EQ(9, testedData.getPixelRed(1, 1));
+    EXPECT_EQ(162, testedData.getPixelGreen(1, 1));
+    EXPECT_EQ(254, testedData.getPixelBlue(1, 1));
+}

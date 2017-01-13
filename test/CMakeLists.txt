@@ -9,5 +9,5 @@ add_executable(ImageDataTest ImageDataTest.cpp)
 target_link_libraries(ImageDataTest ImageData gtest gtest_main)
 
 add_executable(ColorConversionTest ColorConversionTest.cpp)
-target_link_libraries(ColorConversionTest ColorConversion gtest gtest_main)
+target_link_libraries(ColorConversionTest ColorConversion ImageData gtest gtest_main)
 
