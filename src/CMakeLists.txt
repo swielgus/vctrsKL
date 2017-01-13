@@ -19,3 +19,5 @@ include_directories(${PNG_INCLUDE_DIR} ${png++_INCLUDE_DIRS})
 
 add_library(ImageData SHARED ImageData.cpp )
 target_link_libraries(ImageData ${PNG_LIBRARY})
+
+add_library(ColorConversion SHARED ColorConversion.cpp )

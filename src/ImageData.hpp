@@ -1,7 +1,3 @@
-//
-// Created by sw on 11.01.17.
-//
-
 #ifndef VCTRSKL_IMAGEDATA_HPP
 #define VCTRSKL_IMAGEDATA_HPP
 

@@ -1,7 +1,3 @@
-//
-// Created by sw on 11.01.17.
-//
-
 #include "ImageData.hpp"
 
 std::size_t ImageData::getWidth() const
