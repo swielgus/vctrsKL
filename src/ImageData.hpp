@@ -3,11 +3,12 @@
 
 #include <cstddef>
 #include <png++/png.hpp>
+#include "Constants.hpp"
 
 class ImageData
 {
 public:
-    using color_type = png::byte;
+    using color_type = Color::color_byte;
 
     ImageData();
     ImageData(std::string filename);

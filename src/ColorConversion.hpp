@@ -1,22 +1,21 @@
 #ifndef VCTRSKL_COLORCONVERSION_HPP
 #define VCTRSKL_COLORCONVERSION_HPP
 
-namespace ColorConversion
+#include "Constants.hpp"
+
+namespace ColorOperations
 {
-    using color_byte = unsigned char;
+    using color_type = Color::color_byte;
 
-    color_byte convertRGBtoY(const color_byte& red,
-                             const color_byte& green,
-                             const color_byte& blue);
-    color_byte convertRGBtoU(const color_byte& red,
-                             const color_byte& green,
-                             const color_byte& blue);
-    color_byte convertRGBtoV(const color_byte& red,
-                             const color_byte& green,
-                             const color_byte& blue);
-
-    bool areYUVColorsSimilar(const color_byte& aY, const color_byte& aU, const color_byte& aV,
-                             const color_byte& bY, const color_byte& bU, const color_byte& bV);
+    color_type convertRGBtoY(const color_type& red,
+                             const color_type& green,
+                             const color_type& blue);
+    color_type convertRGBtoU(const color_type& red,
+                             const color_type& green,
+                             const color_type& blue);
+    color_type convertRGBtoV(const color_type& red,
+                             const color_type& green,
+                             const color_type& blue);
 }
 
 #endif //VCTRSKL_COLORCONVERSION_HPP
