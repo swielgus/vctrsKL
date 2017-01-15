@@ -5,12 +5,12 @@
 
 __global__ void
 convertToYUV(ImageData::color_type* colorY, ImageData::color_type* colorU, ImageData::color_type* colorV,
-             std::size_t width)
+             const std::size_t* dim)
 {
     int i = threadIdx.x;
-    for(int j = 0; j<width; ++j)
+    for(int j = 0; j < dim[1]; ++j)
     {
-        std::size_t idx = j+i*width;
+        std::size_t idx = j + i * dim[1];
 
         ImageData::color_type red = colorY[idx];
         ImageData::color_type green = colorU[idx];
@@ -22,6 +22,23 @@ convertToYUV(ImageData::color_type* colorY, ImageData::color_type* colorU, Image
     }
 }
 
+const ImageData::color_type* ImageData::getGPUAddressOfYColorData() const
+{
+    return d_colorYData;
+}
+const ImageData::color_type* ImageData::getGPUAddressOfUColorData() const
+{
+    return d_colorUData;
+}
+const ImageData::color_type* ImageData::getGPUAddressOfVColorData() const
+{
+    return d_colorVData;
+}
+
+const std::size_t* ImageData::getGPUAddressOfDimensionsData() const
+{
+    return d_imageDim;
+}
 
 std::size_t ImageData::getWidth() const
 {
@@ -90,16 +107,15 @@ ImageData::color_type ImageData::getPixelV(std::size_t x, std::size_t y) const
 }
 
 ImageData::ImageData(std::string filename)
-        : internalImage{}, d_colorYData{nullptr}, d_colorUData{nullptr}, d_colorVData{nullptr}
+        : internalImage{}, d_colorYData{nullptr}, d_colorUData{nullptr}, d_colorVData{nullptr}, d_imageDim{nullptr}
 {
     this->loadImage(filename);
 }
 
 ImageData::ImageData()
-        : internalImage{}, d_colorYData{nullptr}, d_colorUData{nullptr}, d_colorVData{nullptr}
-{
+        : internalImage{}, d_colorYData{nullptr}, d_colorUData{nullptr}, d_colorVData{nullptr}, d_imageDim{nullptr}
 
-}
+{}
 
 ImageData::~ImageData()
 {
@@ -112,21 +128,25 @@ void ImageData::freeDeviceData()
     cudaFree(d_colorYData);
     cudaFree(d_colorUData);
     cudaFree(d_colorVData);
+    cudaFree(d_imageDim);
 }
 
 void ImageData::allocatePixelDataOnDevice()
 {
     freeDeviceData();
 
-    const std::size_t width = this->getWidth();
-    const std::size_t height = this->getHeight();
-    cudaMalloc( &d_colorYData, width * height * sizeof(color_type));
-    cudaMalloc( &d_colorUData, width * height * sizeof(color_type));
-    cudaMalloc( &d_colorVData, width * height * sizeof(color_type));
+    const std::size_t dim[2] = {this->getHeight(), this->getWidth()};
+
+    cudaMalloc( &d_imageDim, 2 * sizeof(std::size_t));
+    cudaMemcpy( d_imageDim, &dim, 2 * sizeof(std::size_t), cudaMemcpyHostToDevice );
+
+    cudaMalloc( &d_colorYData, dim[1] * dim[0] * sizeof(color_type));
+    cudaMalloc( &d_colorUData, dim[1] * dim[0] * sizeof(color_type));
+    cudaMalloc( &d_colorVData, dim[1] * dim[0] * sizeof(color_type));
 
     int k = 0;
-    for(std::size_t i = 0; i < height; ++i)
-    for(std::size_t j = 0; j < width; ++j)
+    for(std::size_t i = 0; i < dim[0]; ++i)
+    for(std::size_t j = 0; j < dim[1]; ++j)
     {
         const color_type& currentPixelR = this->getPixelRed(i,j);
         const color_type& currentPixelG = this->getPixelGreen(i,j);
@@ -137,5 +157,5 @@ void ImageData::allocatePixelDataOnDevice()
         ++k;
     }
 
-    convertToYUV<<<1,height>>>(d_colorYData, d_colorUData, d_colorVData, width);
+    convertToYUV<<<1,dim[0]>>>(d_colorYData, d_colorUData, d_colorVData, d_imageDim);
 }

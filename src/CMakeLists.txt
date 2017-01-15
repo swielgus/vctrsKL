@@ -23,3 +23,4 @@ target_link_libraries(ImageData ${PNG_LIBRARY})
 add_library(ColorConversion SHARED ColorConversion.cpp)
 
 cuda_add_library(PixelGraph SHARED PixelGraph.cu)
+target_link_libraries(PixelGraph ImageData)
