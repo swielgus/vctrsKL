@@ -3,10 +3,12 @@
 
 struct ImageDataTest : testing::Test
 {
+    using color_type = Color::color_byte;
+
     ImageData testedData;
 
     ImageDataTest()
-            : testedData()
+            : testedData{}
     {}
 
     virtual ~ImageDataTest()
@@ -72,4 +74,37 @@ TEST_F(ImageDataTest, veryDifferentAndVeryCloseColorsShouldBeRecognized)
     EXPECT_EQ(9, testedData.getPixelRed(1, 1));
     EXPECT_EQ(162, testedData.getPixelGreen(1, 1));
     EXPECT_EQ(254, testedData.getPixelBlue(1, 1));
+}
+
+TEST_F(ImageDataTest, twoColorImageShouldBeCorrectlyConvertedToYUV)
+{
+    testedData.loadImage("images/chk_1x2.png");
+
+    color_type extectedWhiteYUV[3] = {255, 128, 128};
+    color_type extectedBlackYUV[3] = {0, 128, 128};
+
+    EXPECT_EQ(extectedBlackYUV[0], testedData.getPixelY(0, 0));
+    EXPECT_EQ(extectedBlackYUV[1], testedData.getPixelU(0, 0));
+    EXPECT_EQ(extectedBlackYUV[2], testedData.getPixelV(0, 0));
+
+    EXPECT_EQ(extectedWhiteYUV[0], testedData.getPixelY(0, 1));
+    EXPECT_EQ(extectedWhiteYUV[1], testedData.getPixelU(0, 1));
+    EXPECT_EQ(extectedWhiteYUV[2], testedData.getPixelV(0, 1));
+}
+
+TEST_F(ImageDataTest, imageWithSimilarColorsShouldBeCorrectlyConvertedToYUV)
+{
+    ImageData testedData("images/4colors.png");
+
+    color_type expectedY[4] = {255, 0, 124, 126};
+    color_type expectedU[4] = {128, 128, 201, 199};
+    color_type expectedV[4] = {128, 128, 49, 44};
+
+    for(std::size_t i = 0; i < testedData.getHeight(); ++i)
+    for(std::size_t j = 0; j < testedData.getWidth(); ++j)
+    {
+        EXPECT_EQ(expectedY[j + 2 * i], testedData.getPixelY(i, j));
+        EXPECT_EQ(expectedU[j + 2 * i], testedData.getPixelU(i, j));
+        EXPECT_EQ(expectedV[j + 2 * i], testedData.getPixelV(i, j));
+    }
 }

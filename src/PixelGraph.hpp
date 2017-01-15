@@ -1,0 +1,11 @@
+#ifndef VCTRSKL_PIXELGRAPH_HPP
+#define VCTRSKL_PIXELGRAPH_HPP
+
+
+class PixelGraph
+{
+
+};
+
+
+#endif //VCTRSKL_PIXELGRAPH_HPP

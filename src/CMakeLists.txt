@@ -17,7 +17,9 @@ find_package_handle_standard_args(
 )
 include_directories(${PNG_INCLUDE_DIR} ${png++_INCLUDE_DIRS})
 
-add_library(ImageData SHARED ImageData.cpp )
+cuda_add_library(ImageData SHARED ImageData.cu )
 target_link_libraries(ImageData ${PNG_LIBRARY})
 
-add_library(ColorConversion SHARED ColorConversion.cpp )
+add_library(ColorConversion SHARED ColorConversion.cpp)
+
+cuda_add_library(PixelGraph SHARED PixelGraph.cu)
