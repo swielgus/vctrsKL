@@ -23,8 +23,9 @@ createConnections(PixelGraph::color_type* edges, const PixelGraph::color_type* c
                   const PixelGraph::color_type* colorU, const PixelGraph::color_type* colorV,
                   const std::size_t* dim, const PixelGraph::color_type* directions)
 {
-    int i = threadIdx.x;
-    for(int j = 0; j < dim[1]; ++j)
+    int i = threadIdx.x + (blockIdx.x * blockDim.x);
+    int j = threadIdx.y + (blockIdx.y * blockDim.y);
+    if(i < dim[0] && j < dim[1])
     {
         std::size_t idx = j + i * dim[1];
         edges[idx] = 0;
@@ -89,8 +90,12 @@ void PixelGraph::constructGraph()
     const std::size_t height = sourceImage.getHeight();
     cudaMalloc( &d_pixelConnections, width * height * sizeof(color_type));
 
+    dim3 dimBlock(16, 16);
+    dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x,
+                 (width + dimBlock.y -1)/dimBlock.y);
+
     //cudaEventRecord(start);
-    createConnections<<<1,height>>>(d_pixelConnections, sourceImage.getGPUAddressOfYColorData(),
+    createConnections<<<dimGrid, dimBlock>>>(d_pixelConnections, sourceImage.getGPUAddressOfYColorData(),
                                     sourceImage.getGPUAddressOfUColorData(), sourceImage.getGPUAddressOfVColorData(),
                                     sourceImage.getGPUAddressOfDimensionsData(), d_pixelDirections);
     //cudaEventRecord(stop);

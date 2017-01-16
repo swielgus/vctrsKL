@@ -7,8 +7,9 @@ __global__ void
 convertToYUV(ImageData::color_type* colorY, ImageData::color_type* colorU, ImageData::color_type* colorV,
              const std::size_t* dim)
 {
-    int i = threadIdx.x;
-    for(int j = 0; j < dim[1]; ++j)
+    int i = threadIdx.x + (blockIdx.x * blockDim.x);
+    int j = threadIdx.y + (blockIdx.y * blockDim.y);
+    if(i < dim[0] && j < dim[1])
     {
         std::size_t idx = j + i * dim[1];
 
@@ -133,6 +134,10 @@ void ImageData::freeDeviceData()
 
 void ImageData::allocatePixelDataOnDevice()
 {
+    //cudaEvent_t start, stop;
+    //cudaEventCreate(&start);
+    //cudaEventCreate(&stop);
+
     freeDeviceData();
 
     const std::size_t dim[2] = {this->getHeight(), this->getWidth()};
@@ -157,5 +162,16 @@ void ImageData::allocatePixelDataOnDevice()
         ++k;
     }
 
-    convertToYUV<<<1,dim[0]>>>(d_colorYData, d_colorUData, d_colorVData, d_imageDim);
+    dim3 dimBlock(16, 16);
+    dim3 dimGrid((dim[0] + dimBlock.x -1)/dimBlock.x,
+                 (dim[1] + dimBlock.y -1)/dimBlock.y);
+
+    //cudaEventRecord(start);
+    convertToYUV<<<dimGrid, dimBlock>>>(d_colorYData, d_colorUData, d_colorVData, d_imageDim);
+    //cudaEventRecord(stop);
+
+    //cudaEventSynchronize(stop);
+    //float milliseconds = 0;
+    //cudaEventElapsedTime(&milliseconds, start, stop);
+    //printf("time:%f\n", milliseconds);
 }
