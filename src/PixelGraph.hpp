@@ -16,6 +16,7 @@ public:
 private:
     const ImageData& sourceImage;
     color_type* d_pixelConnections;
+    color_type* d_pixelDirections;
 
     void freeDeviceData();
     void constructGraph();
