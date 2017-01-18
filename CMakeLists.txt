@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 3.5)
 project(vctrsKL)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread -Wall -pedantic -Wextra")
+INCLUDE(FindCUDA)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread -Wall -Wextra")
 
 find_package(CUDA REQUIRED)
-list(APPEND CUDA_NVCC_FLAGS "-arch=sm_35;-std=c++11;-O2;-DVERBOSE")
-SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
-set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} \"-D_FORCE_INLINES\" ")
+list(APPEND CUDA_NVCC_FLAGS "-arch=sm_35;-O2;-DVERBOSE;-D_FORCE_INLINES")
+set(CUDA_PROPAGATE_HOST_FLAGS ON)
+set(CUDA_SEPARABLE_COMPILATION ON)
+set(CUDA_VERBOSE_BUILD OFF)
 
 add_subdirectory(src)
 add_subdirectory(test)

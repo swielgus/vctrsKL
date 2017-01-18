@@ -15,10 +15,10 @@ find_package_handle_standard_args(
         DEFAULT_MSG
         png++_INCLUDE_DIRS
 )
-include_directories(${PNG_INCLUDE_DIR} ${png++_INCLUDE_DIRS})
+include_directories(${PNG_INCLUDE_DIR} ${png++_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS})
 
-cuda_add_library(ImageData SHARED ImageData.cu )
+cuda_add_library(ImageData STATIC ImageData.cu ImageData.hpp)
 target_link_libraries(ImageData ${PNG_LIBRARY})
 
-cuda_add_library(PixelGraph SHARED PixelGraph.cu)
+cuda_add_library(PixelGraph STATIC PixelGraph.cu PixelGraph.hpp)
 target_link_libraries(PixelGraph ImageData)

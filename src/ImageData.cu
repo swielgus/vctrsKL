@@ -2,7 +2,6 @@
 #include <device_launch_parameters.h>
 #include "ImageData.hpp"
 
-
 __global__ void
 convertToYUV(ImageData::color_type* colorY, ImageData::color_type* colorU, ImageData::color_type* colorV,
              const std::size_t* dim)
@@ -168,6 +167,7 @@ void ImageData::allocatePixelDataOnDevice()
 
     //cudaEventRecord(start);
     convertToYUV<<<dimGrid, dimBlock>>>(d_colorYData, d_colorUData, d_colorVData, d_imageDim);
+    cudaDeviceSynchronize();
     //cudaEventRecord(stop);
 
     //cudaEventSynchronize(stop);
