@@ -12,6 +12,7 @@ public:
     ~PixelGraph();
 
     void resolveUnnecessaryDiagonals();
+    void resolveDisconnectingDiagonals();
     std::vector<std::vector<color_type> > getEdgeValues() const;
 private:
     const ImageData& sourceImage;
