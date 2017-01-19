@@ -9,8 +9,8 @@ __device__ PixelGraph::color_type getColorDifference(const PixelGraph::color_typ
 }
 
 __device__ bool areYUVColorsSimilar(const PixelGraph::color_type& aY, const PixelGraph::color_type& aU,
-                                  const PixelGraph::color_type& aV, const PixelGraph::color_type& bY,
-                                  const PixelGraph::color_type& bU, const PixelGraph::color_type& bV)
+                                    const PixelGraph::color_type& aV, const PixelGraph::color_type& bY,
+                                    const PixelGraph::color_type& bU, const PixelGraph::color_type& bV)
 {
     const PixelGraph::color_type thresholdY = 48;
     const PixelGraph::color_type thresholdU = 7;
@@ -21,10 +21,51 @@ __device__ bool areYUVColorsSimilar(const PixelGraph::color_type& aY, const Pixe
     return abs(aY - bY) <= thresholdY && abs(aU - bU) <= thresholdU && abs(aV - bV) <= thresholdV;
 }
 
+__device__
+int getNeighborRowIdx(int row, GraphEdge direction, const std::size_t* dim)
+{
+    if(direction == GraphEdge::UP || direction == GraphEdge::UPPER_LEFT || direction == GraphEdge::UPPER_RIGHT)
+        row--;
+    if(direction == GraphEdge::DOWN || direction == GraphEdge::LOWER_LEFT || direction == GraphEdge::LOWER_RIGHT)
+        row++;
+
+    return row;
+}
+
+__device__
+int getNeighborColIdx(int col, GraphEdge direction, const std::size_t* dim)
+{
+    if(direction == GraphEdge::LEFT || direction == GraphEdge::UPPER_LEFT || direction == GraphEdge::LOWER_LEFT)
+        col--;
+    if(direction == GraphEdge::RIGHT || direction == GraphEdge::UPPER_RIGHT || direction == GraphEdge::LOWER_RIGHT)
+        col++;
+
+    return col;
+}
+
+__device__ PixelGraph::edge_type
+getConnection(int row, int col, GraphEdge direction, const std::size_t* dim, const PixelGraph::color_type* colorY,
+              const PixelGraph::color_type* colorU, const PixelGraph::color_type* colorV)
+{
+    std::size_t idx = col + row * dim[1];
+
+    int neighborRow = getNeighborRowIdx(row, direction, dim);
+    int neighborCol = getNeighborColIdx(col, direction, dim);
+
+    PixelGraph::edge_type result = 0;
+    if( (neighborRow >= 0 && neighborRow < dim[0]) && (neighborCol >= 0 && neighborCol < dim[1]) )
+    {
+        std::size_t comparedIdx = neighborCol + neighborRow * dim[1];
+        if( areYUVColorsSimilar(colorY[idx], colorU[idx], colorV[idx],
+                                colorY[comparedIdx], colorU[comparedIdx], colorV[comparedIdx]))
+            result = static_cast<PixelGraph::edge_type>(direction);
+    }
+    return result;
+}
+
 __global__ void
-createConnections(PixelGraph::color_type* edges, const PixelGraph::color_type* colorY,
-                  const PixelGraph::color_type* colorU, const PixelGraph::color_type* colorV,
-                  const std::size_t* dim, const PixelGraph::color_type* directions)
+createConnections(PixelGraph::edge_type* edges, const PixelGraph::color_type* colorY,
+                  const PixelGraph::color_type* colorU, const PixelGraph::color_type* colorV, const std::size_t* dim)
 {
     int i = threadIdx.x + (blockIdx.x * blockDim.x);
     int j = threadIdx.y + (blockIdx.y * blockDim.y);
@@ -33,34 +74,19 @@ createConnections(PixelGraph::color_type* edges, const PixelGraph::color_type* c
         std::size_t idx = j + i * dim[1];
         edges[idx] = 0;
 
-        for(int iMod = -1; iMod <= 1; ++iMod)
-        for(int jMod = -1; jMod <= 1; ++jMod)
-        {
-            int iNew = i+iMod;
-            int jNew = j+jMod;
-
-            if( (iNew != i || jNew != j) && (iNew >= 0 && iNew < dim[0]) && (jNew >= 0 && jNew < dim[1]) )
-            {
-                std::size_t comparedIdx = iNew * dim[1] + jNew;
-                if(areYUVColorsSimilar(colorY[idx],colorU[idx],colorV[idx],
-                                       colorY[comparedIdx],colorU[comparedIdx],colorV[comparedIdx]))
-                {
-                    /* graph directions relative to point x:
-                     *  1 | 128 | 64
-                     * --------------
-                     *  2 |  x  | 32
-                     * --------------
-                     *  4 |  8  | 16
-                     */
-                    edges[idx] += directions[(iMod+1)*3 + (jMod+1)];
-                }
-            }
-        }
+        edges[idx] += getConnection(i, j, GraphEdge::UP, dim, colorY, colorU, colorV);
+        edges[idx] += getConnection(i, j, GraphEdge::DOWN, dim, colorY, colorU, colorV);
+        edges[idx] += getConnection(i, j, GraphEdge::LEFT, dim, colorY, colorU, colorV);
+        edges[idx] += getConnection(i, j, GraphEdge::RIGHT, dim, colorY, colorU, colorV);
+        edges[idx] += getConnection(i, j, GraphEdge::UPPER_RIGHT, dim, colorY, colorU, colorV);
+        edges[idx] += getConnection(i, j, GraphEdge::UPPER_LEFT, dim, colorY, colorU, colorV);
+        edges[idx] += getConnection(i, j, GraphEdge::LOWER_RIGHT, dim, colorY, colorU, colorV);
+        edges[idx] += getConnection(i, j, GraphEdge::LOWER_LEFT, dim, colorY, colorU, colorV);
     }
 }
 
 PixelGraph::PixelGraph(const ImageData& image)
-    : sourceImage{image}, d_pixelConnections{nullptr}, d_pixelDirections{nullptr}
+    : sourceImage{image}, d_pixelConnections{nullptr}
 {
     constructGraph();
 }
@@ -74,7 +100,6 @@ PixelGraph::~PixelGraph()
 void PixelGraph::freeDeviceData()
 {
     cudaFree(d_pixelConnections);
-    cudaFree(d_pixelDirections);
 }
 
 void PixelGraph::constructGraph()
@@ -85,13 +110,9 @@ void PixelGraph::constructGraph()
 
     freeDeviceData();
 
-    const PixelGraph::color_type directions[9] = {1,128,64,2,0,32,4,8,16};
-    cudaMalloc( &d_pixelDirections, 9 * sizeof(color_type));
-    cudaMemcpy( d_pixelDirections, &directions, 9 * sizeof(color_type), cudaMemcpyHostToDevice );
-
     const std::size_t width = sourceImage.getWidth();
     const std::size_t height = sourceImage.getHeight();
-    cudaMalloc( &d_pixelConnections, width * height * sizeof(color_type));
+    cudaMalloc( &d_pixelConnections, width * height * sizeof(edge_type));
 
     dim3 dimBlock(16, 16);
     dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x,
@@ -100,7 +121,7 @@ void PixelGraph::constructGraph()
     //cudaEventRecord(start);
     createConnections<<<dimGrid, dimBlock>>>(d_pixelConnections, sourceImage.getGPUAddressOfYColorData(),
                                     sourceImage.getGPUAddressOfUColorData(), sourceImage.getGPUAddressOfVColorData(),
-                                    sourceImage.getGPUAddressOfDimensionsData(), d_pixelDirections);
+                                    sourceImage.getGPUAddressOfDimensionsData());
     cudaDeviceSynchronize();
     //cudaEventRecord(stop);
 
@@ -110,18 +131,18 @@ void PixelGraph::constructGraph()
     //printf("time:%f\n", milliseconds);
 }
 
-std::vector< std::vector<PixelGraph::color_type> > PixelGraph::getEdgeValues() const
+std::vector< std::vector<PixelGraph::edge_type> > PixelGraph::getEdgeValues() const
 {
     const std::size_t width = sourceImage.getWidth();
     const std::size_t height = sourceImage.getHeight();
 
-    std::vector<std::vector<PixelGraph::color_type>> result;
+    std::vector<std::vector<PixelGraph::edge_type>> result;
     result.resize(height);
-    for(std::vector<PixelGraph::color_type>& row : result)
+    for(std::vector<PixelGraph::edge_type>& row : result)
         row.resize(width);
 
     color_type* pixelDirection = new color_type[width * height];
-    cudaMemcpy(pixelDirection, d_pixelConnections, width * height * sizeof(color_type), cudaMemcpyDeviceToHost);
+    cudaMemcpy(pixelDirection, d_pixelConnections, width * height * sizeof(edge_type), cudaMemcpyDeviceToHost);
 
     for(std::size_t x = 0; x < height; ++x)
     for(std::size_t y = 0; y < width; ++y)
@@ -142,8 +163,7 @@ void PixelGraph::resolveUnnecessaryDiagonals()
     dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x,
                  (width + dimBlock.y -1)/dimBlock.y);
     CrossingResolving::removeUnnecessaryCrossings<<<dimGrid, dimBlock>>>(d_pixelConnections,
-                                                                         sourceImage.getGPUAddressOfDimensionsData(),
-                                                                         d_pixelDirections);
+                                                                         sourceImage.getGPUAddressOfDimensionsData());
     cudaDeviceSynchronize();
 }
 
@@ -155,7 +175,6 @@ void PixelGraph::resolveDisconnectingDiagonals()
     dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x,
                  (width + dimBlock.y -1)/dimBlock.y);
     CrossingResolving::resolveCriticalCrossings<<<dimGrid, dimBlock>>>(d_pixelConnections,
-                                                                      sourceImage.getGPUAddressOfDimensionsData(),
-                                                                      d_pixelDirections);
+                                                                      sourceImage.getGPUAddressOfDimensionsData());
     cudaDeviceSynchronize();
 }

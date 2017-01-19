@@ -6,7 +6,8 @@
 class PixelGraph
 {
 public:
-    using color_type = Color::color_byte;
+    using color_type = Color::byte;
+    using edge_type = Graph::byte;
 
     PixelGraph(const ImageData& image);
     ~PixelGraph();
@@ -16,8 +17,7 @@ public:
     std::vector<std::vector<color_type> > getEdgeValues() const;
 private:
     const ImageData& sourceImage;
-    color_type* d_pixelConnections;
-    color_type* d_pixelDirections;
+    edge_type* d_pixelConnections;
 
     void freeDeviceData();
     void constructGraph();

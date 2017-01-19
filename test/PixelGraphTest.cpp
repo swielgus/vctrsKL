@@ -3,7 +3,7 @@
 
 struct PixelGraphTest : testing::Test
 {
-    using color_type = Color::color_byte;
+    using color_type = Color::byte;
 
     PixelGraph* testedGraph;
 

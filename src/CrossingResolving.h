@@ -5,41 +5,55 @@
 
 namespace CrossingResolving
 {
-    __device__ void doAtomicAnd(Color::color_byte* address, Color::color_byte value)
+    __device__ void doAtomicAnd(Graph::byte* address, Graph::byte value)
     {
-        unsigned int *base_address = (unsigned int *)((std::size_t)address & ~3);
+        unsigned int* base_address = (unsigned int*) ((std::size_t) address & ~3);
         unsigned int selectors[] = {0x3214, 0x3240, 0x3410, 0x4210};
-        unsigned int sel = selectors[(size_t)address & 3];
+        unsigned int sel = selectors[(size_t) address & 3];
         unsigned int old, assumed, min_, new_;
 
         old = *base_address;
-        do {
+        do
+        {
             assumed = old;
-            min_ = value & (Color::color_byte)__byte_perm(old, 0, ((std::size_t)address & 3) | 0x4440);
+            min_ = value & (Color::byte) __byte_perm(old, 0, ((std::size_t) address & 3) | 0x4440);
             new_ = __byte_perm(old, min_, sel);
             old = atomicCAS(base_address, assumed, new_);
-        } while (assumed != old);
+        }
+        while(assumed != old);
     }
 
-    __device__ void doAtomicOr(Color::color_byte* address, Color::color_byte value)
+    __device__ void doAtomicOr(Graph::byte* address, Graph::byte value)
     {
-        unsigned int *base_address = (unsigned int *)((std::size_t)address & ~3);
+        unsigned int* base_address = (unsigned int*) ((std::size_t) address & ~3);
         unsigned int selectors[] = {0x3214, 0x3240, 0x3410, 0x4210};
-        unsigned int sel = selectors[(size_t)address & 3];
+        unsigned int sel = selectors[(size_t) address & 3];
         unsigned int old, assumed, min_, new_;
 
         old = *base_address;
-        do {
+        do
+        {
             assumed = old;
-            min_ = value | (Color::color_byte)__byte_perm(old, 0, ((std::size_t)address & 3) | 0x4440);
+            min_ = value | (Color::byte) __byte_perm(old, 0, ((std::size_t) address & 3) | 0x4440);
             new_ = __byte_perm(old, min_, sel);
             old = atomicCAS(base_address, assumed, new_);
-        } while (assumed != old);
+        }
+        while(assumed != old);
     }
 
 
-    __global__ void removeUnnecessaryCrossings(PixelGraph::color_type* edges, const std::size_t* dim,
-                                                const PixelGraph::color_type* directions)
+    __device__ Graph::byte operator+ (GraphEdge a, GraphEdge b)
+    {
+        return (static_cast<Graph::byte>(a) + static_cast<Graph::byte>(b));
+    }
+
+    __device__ Graph::byte operator~(const GraphEdge& a)
+    {
+        return ~(static_cast<Graph::byte>(a));
+    }
+
+
+    __global__ void removeUnnecessaryCrossings(PixelGraph::edge_type* edges, const std::size_t* dim)
     {
         int i = threadIdx.x + (blockIdx.x * blockDim.x);
         int j = threadIdx.y + (blockIdx.y * blockDim.y);
@@ -70,28 +84,28 @@ namespace CrossingResolving
 
             if(!squareIsNotConnected)
             {
-                CrossingResolving::doAtomicOr(&edges[idx], directions[5] + directions[7]);
-                CrossingResolving::doAtomicOr(&edges[idx+1], directions[3] + directions[7]);
-                CrossingResolving::doAtomicOr(&edges[idx+dim[1]], directions[1] + directions[5]);
-                CrossingResolving::doAtomicOr(&edges[idx+dim[1]+1], directions[1] + directions[3]);
+                CrossingResolving::doAtomicOr(&edges[idx], GraphEdge::RIGHT + GraphEdge::DOWN);
+                CrossingResolving::doAtomicOr(&edges[idx+1], GraphEdge::LEFT + GraphEdge::DOWN);
+                CrossingResolving::doAtomicOr(&edges[idx+dim[1]], GraphEdge::UP + GraphEdge::RIGHT);
+                CrossingResolving::doAtomicOr(&edges[idx+dim[1]+1], GraphEdge::UP + GraphEdge::LEFT);
 
-                CrossingResolving::doAtomicAnd(&edges[idx], ~directions[8]);
-                CrossingResolving::doAtomicAnd(&edges[idx+dim[1]+1], ~directions[0]);
-                CrossingResolving::doAtomicAnd(&edges[idx+1], ~directions[6]);
-                CrossingResolving::doAtomicAnd(&edges[idx+dim[1]], ~directions[2]);
+                CrossingResolving::doAtomicAnd(&edges[idx], ~GraphEdge::LOWER_RIGHT);
+                CrossingResolving::doAtomicAnd(&edges[idx+dim[1]+1], ~GraphEdge::UPPER_LEFT);
+                CrossingResolving::doAtomicAnd(&edges[idx+1], ~GraphEdge::LOWER_LEFT);
+                CrossingResolving::doAtomicAnd(&edges[idx+dim[1]], ~GraphEdge::UPPER_RIGHT);
             }
         }
     }
 
-    __global__ void resolveCriticalCrossings(PixelGraph::color_type* edges, const std::size_t* dim,
-                                             const PixelGraph::color_type* directions)
+    __global__ void resolveCriticalCrossings(PixelGraph::edge_type* edges, const std::size_t* dim)
     {
         int i = threadIdx.x + (blockIdx.x * blockDim.x);
         int j = threadIdx.y + (blockIdx.y * blockDim.y);
         if(i < dim[0]-1 && j < dim[1]-1)
         {
             std::size_t idx = j + i * dim[1];
-            bool isThereACrossing = (edges[idx] & directions[8]) && (edges[idx+1] & directions[6]);
+            bool isThereACrossing = (edges[idx] & static_cast<PixelGraph::edge_type>(GraphEdge::LOWER_RIGHT)) &&
+                                    (edges[idx + 1] & static_cast<PixelGraph::edge_type>(GraphEdge::LOWER_LEFT));
         }
     }
 }

@@ -8,7 +8,7 @@
 class ImageData
 {
 public:
-    using color_type = Color::color_byte;
+    using color_type = Color::byte;
 
     ImageData();
     ImageData(std::string filename);
