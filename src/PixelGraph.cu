@@ -21,27 +21,6 @@ __device__ bool areYUVColorsSimilar(const PixelGraph::color_type& aY, const Pixe
     return abs(aY - bY) <= thresholdY && abs(aU - bU) <= thresholdU && abs(aV - bV) <= thresholdV;
 }
 
-__device__
-int getNeighborRowIdx(int row, GraphEdge direction, const std::size_t* dim)
-{
-    if(direction == GraphEdge::UP || direction == GraphEdge::UPPER_LEFT || direction == GraphEdge::UPPER_RIGHT)
-        row--;
-    if(direction == GraphEdge::DOWN || direction == GraphEdge::LOWER_LEFT || direction == GraphEdge::LOWER_RIGHT)
-        row++;
-
-    return row;
-}
-
-__device__
-int getNeighborColIdx(int col, GraphEdge direction, const std::size_t* dim)
-{
-    if(direction == GraphEdge::LEFT || direction == GraphEdge::UPPER_LEFT || direction == GraphEdge::LOWER_LEFT)
-        col--;
-    if(direction == GraphEdge::RIGHT || direction == GraphEdge::UPPER_RIGHT || direction == GraphEdge::LOWER_RIGHT)
-        col++;
-
-    return col;
-}
 
 __device__ PixelGraph::edge_type
 getConnection(int row, int col, GraphEdge direction, const std::size_t* dim, const PixelGraph::color_type* colorY,
@@ -49,8 +28,8 @@ getConnection(int row, int col, GraphEdge direction, const std::size_t* dim, con
 {
     std::size_t idx = col + row * dim[1];
 
-    int neighborRow = getNeighborRowIdx(row, direction, dim);
-    int neighborCol = getNeighborColIdx(col, direction, dim);
+    int neighborRow = CrossingResolving::getNeighborRowIdx(row, direction);
+    int neighborCol = CrossingResolving::getNeighborColIdx(col, direction);
 
     PixelGraph::edge_type result = 0;
     if( (neighborRow >= 0 && neighborRow < dim[0]) && (neighborCol >= 0 && neighborCol < dim[1]) )
