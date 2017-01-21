@@ -29,13 +29,11 @@ public:
     const color_type* getGPUAddressOfYColorData() const;
     const color_type* getGPUAddressOfUColorData() const;
     const color_type* getGPUAddressOfVColorData() const;
-    const std::size_t* getGPUAddressOfDimensionsData() const;
 private:
     png::image<png::rgb_pixel> internalImage;
     color_type* d_colorYData;
     color_type* d_colorUData;
     color_type* d_colorVData;
-    std::size_t* d_imageDim;
 
     void allocatePixelDataOnDevice();
     void freeDeviceData();

@@ -116,8 +116,7 @@ TEST_F(PixelGraphTest, resolvingCrossingsOn1x1GraphShouldNotChangeAnything)
     testedGraph = new PixelGraph(testedImage);
 
     std::vector<std::vector<color_type>> expectedResult{ {0} };
-    testedGraph->resolveUnnecessaryDiagonals();
-    testedGraph->resolveDisconnectingDiagonals();
+    testedGraph->resolveCrossings();
     EXPECT_EQ(expectedResult, testedGraph->getEdgeValues());
 }
 
@@ -128,8 +127,7 @@ TEST_F(PixelGraphTest, resolvingCrossingsOnTwoPointGraphWithNoEdgesShouldNotChan
 
     std::vector<std::vector<color_type>> expectedResult{ {0, 0} };
 
-    testedGraph->resolveUnnecessaryDiagonals();
-    testedGraph->resolveDisconnectingDiagonals();
+    testedGraph->resolveCrossings();
     EXPECT_EQ(expectedResult, testedGraph->getEdgeValues());
 }
 
@@ -143,8 +141,7 @@ TEST_F(PixelGraphTest, resolvingCrossingsOnAHorizontalLineGraphShouldNotChangeAn
         expectedResult[0].push_back(34);
     expectedResult[0].push_back(2);
 
-    testedGraph->resolveUnnecessaryDiagonals();
-    testedGraph->resolveDisconnectingDiagonals();
+    testedGraph->resolveCrossings();
     EXPECT_EQ(expectedResult, testedGraph->getEdgeValues());
 }
 
@@ -158,8 +155,7 @@ TEST_F(PixelGraphTest, resolvingCrossingsOnAVerticalLineGraphShouldNotChangeAnyt
         expectedResult.push_back({136});
     expectedResult.push_back({128});
 
-    testedGraph->resolveUnnecessaryDiagonals();
-    testedGraph->resolveDisconnectingDiagonals();
+    testedGraph->resolveCrossings();
     EXPECT_EQ(expectedResult, testedGraph->getEdgeValues());
 }
 
@@ -170,8 +166,7 @@ TEST_F(PixelGraphTest, resolvingCrossingsOnFourPointsAndOneEdgeShouldNotChangeAn
 
     std::vector<std::vector<color_type>> expectedResult{ {0, 0}, {32, 2} };
 
-    testedGraph->resolveUnnecessaryDiagonals();
-    testedGraph->resolveDisconnectingDiagonals();
+    testedGraph->resolveCrossings();
     EXPECT_EQ(expectedResult, testedGraph->getEdgeValues());
 }
 
@@ -183,16 +178,96 @@ TEST_F(PixelGraphTest, resolvingCrossingsOnUniformImageShouldRemoveAllDiagonals)
     std::vector<std::vector<color_type>> expectedResult{{40,           42,               10},
                                                         {128 + 32 + 8, 128 + 32 + 8 + 2, 128 + 2 + 8},
                                                         {128 + 32,     2 + 128 + 32,     128 + 2}};
-    testedGraph->resolveUnnecessaryDiagonals();
-    testedGraph->resolveDisconnectingDiagonals();
+    testedGraph->resolveCrossings();
     EXPECT_EQ(expectedResult, testedGraph->getEdgeValues());
 }
 
-TEST_F(PixelGraphTest, resolvingUnusedCrossingsOnAComplicatedImageShouldLeaveOnlyCrossColorCrossings)
+TEST_F(PixelGraphTest, resolvingCrossingsOnACurveTestShouldConstructAFinalGraph)
+{
+    ImageData testedImage("images/curveHeuTest.png");
+    testedGraph = new PixelGraph(testedImage);
+
+    std::vector<std::vector<color_type>> expectedResult{
+            {40,42,38,50,42,10},
+            {168,198,36,18,177,138},
+            {200,72,40,10,9,137},
+            {152,128,172,138,136,136},
+            {168,107,170,138,136,136},
+            {168,170,170,154,128,140},
+            {160,162,162,162,99,130}
+    };
+    testedGraph->resolveCrossings();
+
+    std::vector<std::vector<color_type>> result = testedGraph->getEdgeValues();
+    EXPECT_EQ(expectedResult, result);
+}
+
+TEST_F(PixelGraphTest, resolvingCrossingsOnAnIslandTestShouldConstructAFinalGraph)
+{
+    ImageData testedImage("images/islandHeuTest.png");
+    testedGraph = new PixelGraph(testedImage);
+
+    std::vector<std::vector<color_type>> expectedResult{
+            {40,42,54,10},
+            {160,194,4,141},
+            {40,74,104,138},
+            {160,130,160,130}
+    };
+    testedGraph->resolveCrossings();
+
+    std::vector<std::vector<color_type>> result = testedGraph->getEdgeValues();
+    EXPECT_EQ(expectedResult, result);
+}
+
+TEST_F(PixelGraphTest, resolvingCrossingsOnASparsePixelsTestShouldConstructAFinalGraph)
+{
+    ImageData testedImage("images/sparseHeuTest.png");
+    testedGraph = new PixelGraph(testedImage);
+
+    std::vector<std::vector<color_type>> expectedResult{
+            {40, 42, 38, 50, 42, 42, 42, 10},
+            {168,198,36, 18, 177,170,170,138},
+            {200,72, 40, 10, 25, 177,170,138},
+            {152,144,160,130,164,19, 177,138},
+            {168,27, 49, 74, 40, 10, 9,  137},
+            {168,170,27, 145,160,130,132,140},
+            {168,170,170,27, 33, 66, 108,138},
+            {160,162,162,162,35, 98, 162,130}
+    };
+    testedGraph->resolveCrossings();
+
+    std::vector<std::vector<color_type>> result = testedGraph->getEdgeValues();
+    EXPECT_EQ(expectedResult, result);
+}
+
+TEST_F(PixelGraphTest, resolvingCrossingsOnASimpleImageShouldMakeAFinalGraph)
+{
+    ImageData testedImage("images/crossingSign.png");
+    testedGraph = new PixelGraph(testedImage);
+
+    std::vector<std::vector<color_type>> expectedResult{
+            {0,44,42,42,38,34,50,42,10},
+            {104,170,170,198,36,34,18,177,138},
+            {104,170,218,64,60,42,10,9,137},
+            {104,170,170,107,170,170,138,136,136},
+            {168,166,178,170,170,166,130,132,140},
+            {216,32,18,161,194,36,66,108,138},
+            {168,43,10,1,68,40,106,170,138},
+            {104,170,138,72,16,160,178,170,138},
+            {104,170,154,128,28,33,2,173,138},
+            {160,162,162,99,162,35,98,162,130}
+    };
+    testedGraph->resolveCrossings();
+
+    std::vector<std::vector<color_type>> result = testedGraph->getEdgeValues();
+    EXPECT_EQ(expectedResult, result);
+}
+
+TEST_F(PixelGraphTest, resolvingCrossingsOnAComplicatedImageShouldLeaveOnlyCrossColorCrossings)
 {
     ImageData testedImage("images/smw_boo_input.png");
     testedGraph = new PixelGraph(testedImage);
-
+    //TODO fix critical crossings
     std::vector<std::vector<color_type>> expectedResult{
             {40,42,42,42,42,42,38,34,34,34,50,42,42,42,42,42,42,10},
             {168,170,170,170,166,210,36,34,34,34,18,165,178,170,170,170,170,138},
@@ -213,92 +288,7 @@ TEST_F(PixelGraphTest, resolvingUnusedCrossingsOnAComplicatedImageShouldLeaveOnl
             {168,170,170,170,43,90,33,34,34,34,66,45,106,170,170,170,170,138},
             {160,162,162,162,162,162,35,34,34,34,98,162,162,162,162,162,162,130}
     };
-    testedGraph->resolveUnnecessaryDiagonals();
-
-    std::vector<std::vector<color_type>> result = testedGraph->getEdgeValues();
-    EXPECT_EQ(expectedResult, result);
-}
-
-TEST_F(PixelGraphTest, resolvingAllCrossingsOnACurveTestShouldConstructAFinalGraph)
-{
-    ImageData testedImage("images/curveHeuTest.png");
-    testedGraph = new PixelGraph(testedImage);
-
-    std::vector<std::vector<color_type>> expectedResult{
-            {40,42,38,50,42,10},
-            {168,198,36,18,177,138},
-            {200,72,40,10,9,137},
-            {152,128,172,138,136,136},
-            {168,107,170,138,136,136},
-            {168,170,170,154,128,140},
-            {160,162,162,162,99,130}
-    };
-    testedGraph->resolveUnnecessaryDiagonals();
-    testedGraph->resolveDisconnectingDiagonals();
-
-    std::vector<std::vector<color_type>> result = testedGraph->getEdgeValues();
-    EXPECT_EQ(expectedResult, result);
-}
-
-TEST_F(PixelGraphTest, resolvingAllCrossingsOnAnIslandTestShouldConstructAFinalGraph)
-{
-    ImageData testedImage("images/islandHeuTest.png");
-    testedGraph = new PixelGraph(testedImage);
-
-    std::vector<std::vector<color_type>> expectedResult{
-            {40,42,54,10},
-            {160,194,4,141},
-            {40,74,104,138},
-            {160,130,160,130}
-    };
-    testedGraph->resolveUnnecessaryDiagonals();
-    testedGraph->resolveDisconnectingDiagonals();
-
-    std::vector<std::vector<color_type>> result = testedGraph->getEdgeValues();
-    EXPECT_EQ(expectedResult, result);
-}
-
-TEST_F(PixelGraphTest, resolvingAllCrossingsOnASparsePixelsTestShouldConstructAFinalGraph)
-{
-    ImageData testedImage("images/sparseHeuTest.png");
-    testedGraph = new PixelGraph(testedImage);
-
-    std::vector<std::vector<color_type>> expectedResult{
-            {40, 42, 38, 50, 42, 42, 42, 10},
-            {168,198,36, 18, 177,170,170,138},
-            {200,72, 40, 10, 25, 177,170,138},
-            {152,144,160,130,164,19, 177,138},
-            {168,27, 49, 74, 40, 10, 9,  137},
-            {168,170,27, 145,160,130,132,140},
-            {168,170,170,27, 33, 66, 108,138},
-            {160,162,162,162,35, 98, 162,130}
-    };
-    testedGraph->resolveUnnecessaryDiagonals();
-    testedGraph->resolveDisconnectingDiagonals();
-
-    std::vector<std::vector<color_type>> result = testedGraph->getEdgeValues();
-    EXPECT_EQ(expectedResult, result);
-}
-
-TEST_F(PixelGraphTest, resolvingAllCrossingsOnASimpleImageShouldMakeAFinalGraph)
-{
-    ImageData testedImage("images/crossingSign.png");
-    testedGraph = new PixelGraph(testedImage);
-
-    std::vector<std::vector<color_type>> expectedResult{
-            {0,44,42,42,38,34,50,42,10},
-            {104,170,170,198,36,34,18,177,138},
-            {104,170,218,64,60,42,10,9,137},
-            {104,170,170,107,170,170,138,136,136},
-            {168,166,178,170,170,166,130,132,140},
-            {216,32,18,161,194,36,66,108,138},
-            {168,43,10,1,68,40,106,170,138},
-            {104,170,138,72,16,160,178,170,138},
-            {104,170,154,128,28,33,2,173,138},
-            {160,162,162,99,162,35,98,162,130}
-    };
-    testedGraph->resolveUnnecessaryDiagonals();
-    testedGraph->resolveDisconnectingDiagonals();
+    testedGraph->resolveCrossings();
 
     std::vector<std::vector<color_type>> result = testedGraph->getEdgeValues();
     EXPECT_EQ(expectedResult, result);

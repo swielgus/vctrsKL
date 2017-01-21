@@ -17,8 +17,15 @@ find_package_handle_standard_args(
 )
 include_directories(${CUDA_TOOLKIT_INCLUDE} ${PNG_INCLUDE_DIR} ${png++_INCLUDE_DIRS})
 
-cuda_add_library(ImageData STATIC ImageData.cu ImageData.hpp)
+cuda_add_library(ImageData ImageData.cu)
 target_link_libraries(ImageData ${PNG_LIBRARY})
 
-cuda_add_library(PixelGraph STATIC PixelGraph.cu PixelGraph.hpp)
-target_link_libraries(PixelGraph ImageData)
+cuda_add_library(PixelGraphInfo PixelGraphInfo.cu)
+
+cuda_add_library(GraphConstructing GraphConstructing.cu)
+target_link_libraries(GraphConstructing PixelGraphInfo)
+cuda_add_library(GraphCrossResolving GraphCrossResolving.cu)
+target_link_libraries(GraphCrossResolving PixelGraphInfo)
+
+cuda_add_library(PixelGraph PixelGraph.cu)
+target_link_libraries(PixelGraph PixelGraphInfo GraphConstructing GraphCrossResolving ImageData  )
