@@ -3,7 +3,8 @@
 #include "ImageData.hpp"
 
 __global__ void
-convertToYUV(ImageData::color_type* colorY, ImageData::color_type* colorU, ImageData::color_type* colorV,
+convertToYUV(ImageData::color_type* inputR, ImageData::color_type* inputG, ImageData::color_type* inputB,
+             ImageData::color_type* outputY, ImageData::color_type* outputU, ImageData::color_type* outputV,
              const std::size_t width, const std::size_t height)
 {
     int i = threadIdx.x + (blockIdx.x * blockDim.x);
@@ -12,13 +13,13 @@ convertToYUV(ImageData::color_type* colorY, ImageData::color_type* colorU, Image
     {
         std::size_t idx = j + i * width;
 
-        ImageData::color_type red = colorY[idx];
-        ImageData::color_type green = colorU[idx];
-        ImageData::color_type blue = colorV[idx];
+        ImageData::color_type red = inputR[idx];
+        ImageData::color_type green = inputG[idx];
+        ImageData::color_type blue = inputB[idx];
 
-        colorY[idx] = static_cast<ImageData::color_type>(0.299 * red + 0.587 * green + 0.114 * blue);
-        colorU[idx] = static_cast<ImageData::color_type>((-0.169 * red - 0.331 * green + 0.5 * blue) + 128);
-        colorV[idx] = static_cast<ImageData::color_type>((0.5 * red - 0.419 * green - 0.081 * blue) + 128);
+        outputY[idx] = static_cast<ImageData::color_type>(0.299 * red + 0.587 * green + 0.114 * blue);
+        outputU[idx] = static_cast<ImageData::color_type>((-0.169 * red - 0.331 * green + 0.5 * blue) + 128);
+        outputV[idx] = static_cast<ImageData::color_type>((0.5 * red - 0.419 * green - 0.081 * blue) + 128);
     }
 }
 
@@ -136,9 +137,13 @@ void ImageData::allocatePixelDataOnDevice()
     std::size_t height = this->getHeight();
     std::size_t width = this->getWidth();
 
-    cudaMalloc( &d_colorYData, width * height * sizeof(color_type));
-    cudaMalloc( &d_colorUData, width * height * sizeof(color_type));
-    cudaMalloc( &d_colorVData, width * height * sizeof(color_type));
+    color_type* d_inputRData = nullptr;
+    color_type* d_inputGData = nullptr;
+    color_type* d_inputBData = nullptr;
+
+    cudaMalloc( &d_inputRData, width * height * sizeof(color_type));
+    cudaMalloc( &d_inputGData, width * height * sizeof(color_type));
+    cudaMalloc( &d_inputBData, width * height * sizeof(color_type));
 
     int k = 0;
     for(std::size_t i = 0; i < height; ++i)
@@ -147,23 +152,27 @@ void ImageData::allocatePixelDataOnDevice()
         const color_type& currentPixelR = this->getPixelRed(i,j);
         const color_type& currentPixelG = this->getPixelGreen(i,j);
         const color_type& currentPixelB = this->getPixelBlue(i,j);
-        cudaMemcpy( d_colorYData+k, &currentPixelR, sizeof(color_type), cudaMemcpyHostToDevice );
-        cudaMemcpy( d_colorUData+k, &currentPixelG, sizeof(color_type), cudaMemcpyHostToDevice );
-        cudaMemcpy( d_colorVData+k, &currentPixelB, sizeof(color_type), cudaMemcpyHostToDevice );
+        cudaMemcpy( d_inputRData+k, &currentPixelR, sizeof(color_type), cudaMemcpyHostToDevice );
+        cudaMemcpy( d_inputGData+k, &currentPixelG, sizeof(color_type), cudaMemcpyHostToDevice );
+        cudaMemcpy( d_inputBData+k, &currentPixelB, sizeof(color_type), cudaMemcpyHostToDevice );
         ++k;
     }
+
+    cudaMalloc( &d_colorYData, width * height * sizeof(color_type));
+    cudaMalloc( &d_colorUData, width * height * sizeof(color_type));
+    cudaMalloc( &d_colorVData, width * height * sizeof(color_type));
+
+
 
     dim3 dimBlock(16, 16);
     dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x,
                  (width + dimBlock.y -1)/dimBlock.y);
 
-    //cudaEventRecord(start);
-    convertToYUV<<<dimGrid, dimBlock>>>(d_colorYData, d_colorUData, d_colorVData, width, height);
+    convertToYUV<<<dimGrid, dimBlock>>>(d_inputRData, d_inputGData, d_inputBData,
+                                        d_colorYData, d_colorUData, d_colorVData, width, height);
     cudaDeviceSynchronize();
-    //cudaEventRecord(stop);
 
-    //cudaEventSynchronize(stop);
-    //float milliseconds = 0;
-    //cudaEventElapsedTime(&milliseconds, start, stop);
-    //printf("time:%f\n", milliseconds);
+    cudaFree(d_inputRData);
+    cudaFree(d_inputGData);
+    cudaFree(d_inputBData);
 }
