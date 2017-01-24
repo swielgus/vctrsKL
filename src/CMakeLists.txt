@@ -17,8 +17,9 @@ find_package_handle_standard_args(
 )
 include_directories(${CUDA_TOOLKIT_INCLUDE} ${PNG_INCLUDE_DIR} ${png++_INCLUDE_DIRS})
 
+cuda_add_library(ImageComponentLabeling ImageComponentLabeling.cu)
 cuda_add_library(ImageData ImageData.cu)
-target_link_libraries(ImageData ${PNG_LIBRARY})
+target_link_libraries(ImageData ${PNG_LIBRARY} ImageComponentLabeling)
 
 cuda_add_library(PixelGraphInfo PixelGraphInfo.cu)
 

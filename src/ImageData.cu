@@ -1,6 +1,7 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include "ImageData.hpp"
+#include "ImageComponentLabeling.hpp"
 
 __global__ void
 convertToYUV(ImageData::color_type* inputR, ImageData::color_type* inputG, ImageData::color_type* inputB,
@@ -49,7 +50,8 @@ std::size_t ImageData::getHeight() const
 void ImageData::loadImage(std::string filename)
 {
     internalImage.read(filename);
-    this->allocatePixelDataOnDevice();
+    allocatePixelDataOnDevice();
+    createLabelsForSimilarPixels();
 }
 
 const png::rgb_pixel& ImageData::getPixel(std::size_t x, std::size_t y) const
@@ -103,13 +105,15 @@ ImageData::color_type ImageData::getPixelV(std::size_t x, std::size_t y) const
 }
 
 ImageData::ImageData(std::string filename)
-        : internalImage{}, d_colorYData{nullptr}, d_colorUData{nullptr}, d_colorVData{nullptr}
+        : internalImage{}, d_colorYData{nullptr}, d_colorUData{nullptr}, d_colorVData{nullptr},
+          d_componentLabels{nullptr}
 {
     this->loadImage(filename);
 }
 
 ImageData::ImageData()
-        : internalImage{}, d_colorYData{nullptr}, d_colorUData{nullptr}, d_colorVData{nullptr}
+        : internalImage{}, d_colorYData{nullptr}, d_colorUData{nullptr}, d_colorVData{nullptr},
+          d_componentLabels{nullptr}
 
 {}
 
@@ -124,6 +128,31 @@ void ImageData::freeDeviceData()
     cudaFree(d_colorYData);
     cudaFree(d_colorUData);
     cudaFree(d_colorVData);
+    cudaFree(d_componentLabels);
+}
+
+std::vector< std::vector<int> > ImageData::getLabelValues() const
+{
+    const std::size_t width = getWidth();
+    const std::size_t height = getHeight();
+
+    std::vector< std::vector<int> > result;
+    result.resize(height);
+    for(std::vector<int>& row : result)
+        row.resize(width);
+
+    int* pixelLabels = new int[width * height];
+    cudaMemcpy(pixelLabels, d_componentLabels, width * height * sizeof(int), cudaMemcpyDeviceToHost);
+
+    for(std::size_t x = 0; x < height; ++x)
+    for(std::size_t y = 0; y < width; ++y)
+    {
+        result[x][y] = *(pixelLabels + (y + x * width));
+    }
+
+    delete[] pixelLabels;
+
+    return result;
 }
 
 void ImageData::allocatePixelDataOnDevice()
@@ -175,4 +204,60 @@ void ImageData::allocatePixelDataOnDevice()
     cudaFree(d_inputRData);
     cudaFree(d_inputGData);
     cudaFree(d_inputBData);
+}
+
+void ImageData::createLabelsForSimilarPixels()
+{
+    std::size_t height = this->getHeight();
+    std::size_t width = this->getWidth();
+    cudaMalloc( &d_componentLabels, width * height * sizeof(int));
+
+    int blockSide = 16;
+    dim3 dimBlock(blockSide, blockSide);
+    dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x, (width + dimBlock.y -1)/dimBlock.y);
+
+    int numberOfPixelsPerBlock = dimBlock.x * dimBlock.y;
+
+    ImageComponentLabeling::createLocalComponentLabels <<<dimGrid, dimBlock, (numberOfPixelsPerBlock * sizeof(int))+(3 * numberOfPixelsPerBlock * sizeof(Color::byte))>>>(
+        d_colorYData, d_colorUData, d_colorVData, d_componentLabels, width, height);
+    cudaDeviceSynchronize();
+
+    /*dim3 block(4, 4, blockSide);
+    dim3 grid((height + (block.x * blockSide) - 1) / (block.x * blockSide),
+              (width + (block.x * blockSide) - 1) / (block.x * blockSide));
+    ImageComponentLabeling::mergeSolutionsOnBlockBorders<<<grid, block>>>(
+            d_colorYData, d_colorUData, d_colorVData, d_componentLabels, width, height, blockSide);*/
+
+    /*int k =0;
+    while(blockSide < width || blockSide < height)
+    {
+        //compute the number of tiles that are going to be merged in a singe thread block
+        int xTiles = 4;
+        int yTiles = 4;
+        if(xTiles * blockSide > width)
+            xTiles = width / blockSide;
+        if(yTiles * blockSide > height)
+            yTiles = height / blockSide;
+        //the number of threads that is going to be used to merge neigboring tiles
+        int threadsPerBlock = 32;
+        if(blockSide < threadsPerBlock)
+            threadsPerBlock = blockSide;
+        dim3 block(xTiles, yTiles, threadsPerBlock);
+        dim3 grid((height + (block.x * blockSide) - 1) / (block.x * blockSide),
+                  (width + (block.x * blockSide) - 1) / (block.x * blockSide));
+
+        //call KERNEL 2
+
+
+        if(yTiles > xTiles)
+            blockSide = yTiles * blockSide;
+        else
+            blockSide = xTiles * blockSide;
+
+        if(blockSide < width || blockSide < height)
+        {
+            //update borders (KERNEL 3)
+            //cclFlattenEquivalenceTreesAfterMergingTiles(inOutLabelsBuf, inOutLabelsBuf, threadsX, threadsX, imgWidth, imgHeight, dataWidth, log2DataWidth, tileSize);
+        }
+    }*/
 }

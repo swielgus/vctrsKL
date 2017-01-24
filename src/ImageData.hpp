@@ -29,13 +29,18 @@ public:
     const color_type* getGPUAddressOfYColorData() const;
     const color_type* getGPUAddressOfUColorData() const;
     const color_type* getGPUAddressOfVColorData() const;
+
+    std::vector< std::vector<int> > getLabelValues() const;
 private:
     png::image<png::rgb_pixel> internalImage;
     color_type* d_colorYData;
     color_type* d_colorUData;
     color_type* d_colorVData;
+    int* d_componentLabels;
 
     void allocatePixelDataOnDevice();
+    void createLabelsForSimilarPixels();
+
     void freeDeviceData();
     const png::rgb_pixel& getPixel(std::size_t x, std::size_t y) const;
 };

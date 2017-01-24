@@ -108,3 +108,99 @@ TEST_F(ImageDataTest, imageWithSimilarColorsShouldBeCorrectlyConvertedToYUV)
         EXPECT_EQ(expectedV[j + 2 * i], testedData.getPixelV(i, j));
     }
 }
+
+TEST_F(ImageDataTest, constructingComponentLabelsOn1x1ImageShouldGiveOnePoint)
+{
+    ImageData testedData("images/1x1.png");
+
+    std::vector< std::vector<int> > expectedResult{ {0} };
+    std::vector< std::vector<int> > actualResult = testedData.getLabelValues();
+
+    EXPECT_EQ(expectedResult, actualResult);
+}
+
+TEST_F(ImageDataTest, constructingComponentLabelsOn2x2ImageWithSimilatrsShouldGiveThreeLabels)
+{
+    ImageData testedData("images/4colors.png");
+
+    std::vector< std::vector<int> > actualResult = testedData.getLabelValues();
+
+    EXPECT_TRUE( actualResult[0][0] != actualResult [0][1] );
+    EXPECT_TRUE( actualResult[0][0] != actualResult [1][0] );
+    EXPECT_TRUE( actualResult[0][1] != actualResult [1][0] );
+    EXPECT_TRUE( actualResult[0][0] != actualResult [1][1] );
+    EXPECT_TRUE( actualResult[0][1] != actualResult [1][1] );
+    EXPECT_TRUE( std::equal(actualResult[1].begin()+1, actualResult[1].end(), actualResult[1].begin()) );
+}
+
+TEST_F(ImageDataTest, constructingComponentLabelsOnHorizontalLineShouldGiveOneLabelToAllOfThem)
+{
+    ImageData testedData("images/1x100.png");
+
+    std::vector< std::vector<int> > expectedResult{ {} };
+    for(int i = 1; i <= 100; ++i)
+        expectedResult[0].push_back(0);
+
+    std::vector< std::vector<int> > actualResult = testedData.getLabelValues();
+
+    EXPECT_EQ(expectedResult, actualResult);
+    //EXPECT_TRUE( std::equal(actualResult[0].begin()+1, actualResult[0].end(), actualResult[0].begin()) );
+}
+
+TEST_F(ImageDataTest, constructingComponentLabelsOnVerticalLineShouldGiveOneLabelToAllOfThem)
+{
+    ImageData testedData("images/100x1.png");
+
+    std::vector< std::vector<int> > expectedResult{};
+    for(int i = 1; i <= 100; ++i)
+        expectedResult.push_back({0});
+
+    std::vector< std::vector<int> > actualResult = testedData.getLabelValues();
+
+    for(int row = 0; row < 100; ++row)
+        EXPECT_EQ(expectedResult[row], actualResult[row]);
+    //EXPECT_TRUE(std::equal(actualResult.begin()+1, actualResult.end(), actualResult.begin()));
+}
+
+TEST_F(ImageDataTest, constructingComponentLabelsOnBinaryTestImageShouldLabel4Components)
+{
+    ImageData testedData("images/componentTest.png");
+
+    std::vector< std::vector<int> > expectedResult{
+            {0,1,1,1,0,1,1,7},
+            {0,0,0,1,0,1,1,7},
+            {0,1,1,0,0,1,1,7},
+            {0,1,0,0,0,1,1,7},
+            {0,1,0,1,1,1,1,1},
+            {0,1,0,1,1,1,1,1},
+            {0,1,0,1,1,1,54,54},
+            {0,1,1,1,1,1,54,54}
+    };
+
+    std::vector< std::vector<int> > actualResult = testedData.getLabelValues();
+
+    for(int row = 0; row < 8; ++row)
+        EXPECT_EQ(expectedResult[row], actualResult[row]);
+}
+
+TEST_F(ImageDataTest, constructingComponentLabelsOnUnevenImageShouldLabelComponents)
+{
+    ImageData testedData("images/irregularComponentTest.png");
+
+    std::vector< std::vector<int> > expectedResult{};
+    for(int row = 0; row < 51; ++row)
+        expectedResult.emplace_back(65,0);
+    for(int row = 0; row < 32; ++row)
+        for(int col = 0; col < 32; ++col)
+        {
+            if((row < 16 && col < 16 && row != col) && (row != 32-col))
+                expectedResult[row][col] = 1;
+        }
+    for(int col = 32; col < 65; ++col)
+        expectedResult[0][col] = 32;
+
+    std::vector< std::vector<int> > actualResult = testedData.getLabelValues();
+
+    for(int row = 0; row < 51; ++row)
+        EXPECT_EQ(expectedResult[row], actualResult[row]);
+}
