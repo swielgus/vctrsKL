@@ -1,5 +1,4 @@
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
+
 #include "ImageData.hpp"
 #include "ImageComponentLabeling.hpp"
 
@@ -214,50 +213,46 @@ void ImageData::createLabelsForSimilarPixels()
 
     int blockSide = 16;
     dim3 dimBlock(blockSide, blockSide);
-    dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x, (width + dimBlock.y -1)/dimBlock.y);
+    dim3 dimGrid((height + dimBlock.y - 1)/dimBlock.y, (width + dimBlock.x - 1)/dimBlock.x);
 
     int numberOfPixelsPerBlock = dimBlock.x * dimBlock.y;
 
+    //solve components in local squares
     ImageComponentLabeling::createLocalComponentLabels <<<dimGrid, dimBlock, (numberOfPixelsPerBlock * sizeof(int))+(3 * numberOfPixelsPerBlock * sizeof(Color::byte))>>>(
         d_colorYData, d_colorUData, d_colorVData, d_componentLabels, width, height);
     cudaDeviceSynchronize();
 
-    /*dim3 block(4, 4, blockSide);
-    dim3 grid((height + (block.x * blockSide) - 1) / (block.x * blockSide),
-              (width + (block.x * blockSide) - 1) / (block.x * blockSide));
-    ImageComponentLabeling::mergeSolutionsOnBlockBorders<<<grid, block>>>(
-            d_colorYData, d_colorUData, d_colorVData, d_componentLabels, width, height, blockSide);*/
-
-    /*int k =0;
-    while(blockSide < width || blockSide < height)
+    //merge small results into bigger groups
+    while( (blockSide < width || blockSide < height) )
     {
-        //compute the number of tiles that are going to be merged in a singe thread block
-        int xTiles = 4;
-        int yTiles = 4;
-        if(xTiles * blockSide > width)
-            xTiles = width / blockSide;
-        if(yTiles * blockSide > height)
-            yTiles = height / blockSide;
-        //the number of threads that is going to be used to merge neigboring tiles
-        int threadsPerBlock = 32;
-        if(blockSide < threadsPerBlock)
-            threadsPerBlock = blockSide;
-        dim3 block(xTiles, yTiles, threadsPerBlock);
-        dim3 grid((height + (block.x * blockSide) - 1) / (block.x * blockSide),
-                  (width + (block.x * blockSide) - 1) / (block.x * blockSide));
+        //compute the number of tiles that are going to be merged in a single thread block
+        int numberOfTileRows = 4;
+        int numberOfTileCols = 4;
 
-        //call KERNEL 2
+        if(numberOfTileCols * blockSide > width)
+            numberOfTileCols = (width + blockSide - 1) / blockSide;
 
+        if(numberOfTileRows * blockSide > height)
+            numberOfTileRows = (height + blockSide - 1) / blockSide;
 
-        if(yTiles > xTiles)
-            blockSide = yTiles * blockSide;
+        int threadsPerTile = 32;
+        if(blockSide < threadsPerTile)
+            threadsPerTile = blockSide;
+
+        dim3 block(numberOfTileRows, numberOfTileCols, threadsPerTile);
+        dim3 grid((height + (numberOfTileRows * blockSide) - 1) / (numberOfTileRows * blockSide),
+                  (width + (numberOfTileCols * blockSide) - 1) / (numberOfTileCols * blockSide));
+        ImageComponentLabeling::mergeSolutionsOnBlockBorders<<<grid, block>>>(
+                d_colorYData, d_colorUData, d_colorVData, d_componentLabels, width, height, blockSide);
+
+        if(numberOfTileCols > numberOfTileRows)
+            blockSide = numberOfTileCols * blockSide;
         else
-            blockSide = xTiles * blockSide;
+            blockSide = numberOfTileRows * blockSide;
 
-        if(blockSide < width || blockSide < height)
-        {
-            //update borders (KERNEL 3)
-            //cclFlattenEquivalenceTreesAfterMergingTiles(inOutLabelsBuf, inOutLabelsBuf, threadsX, threadsX, imgWidth, imgHeight, dataWidth, log2DataWidth, tileSize);
-        }
-    }*/
+        //TODO update labels on borders
+    }
+
+    //update all labels
+    ImageComponentLabeling::flattenAllEquivalenceTrees<<<dimGrid, dimBlock>>>(d_componentLabels, width, height);
 }

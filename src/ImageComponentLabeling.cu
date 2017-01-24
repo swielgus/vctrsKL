@@ -43,36 +43,38 @@ ImageComponentLabeling::doUnionOfTrees(int* labels, int labelA, int labelB, int*
 
 __device__ void
 ImageComponentLabeling::checkAndCombineTwoPixelRoots(int* labels, int labelA, int labelB, Color::byte* colorY,
-                                                     Color::byte* colorU, Color::byte* colorV, int* didAnyLabelChange)
+                                                     Color::byte* colorU, Color::byte* colorV, int* didAnyLabelChange,
+                                                     int idxLimit)
 {
-    Color::byte currentY = colorY[labelA];
-    Color::byte currentU = colorU[labelA];
-    Color::byte currentV = colorV[labelA];
-    Color::byte comparedY = colorY[labelB];
-    Color::byte comparedU = colorU[labelB];
-    Color::byte comparedV = colorV[labelB];
-    if(areYUVColorsSimilar(currentY, currentU, currentV, comparedY, comparedU, comparedV))
+    if(labelA >= 0 && labelA < idxLimit && labelB >= 0 && labelB < idxLimit)
     {
-        doUnionOfTrees(labels, labelA, labelB, didAnyLabelChange);
+        Color::byte currentY = colorY[labelA];
+        Color::byte currentU = colorU[labelA];
+        Color::byte currentV = colorV[labelA];
+        Color::byte comparedY = colorY[labelB];
+        Color::byte comparedU = colorU[labelB];
+        Color::byte comparedV = colorV[labelB];
+        if(areYUVColorsSimilar(currentY, currentU, currentV, comparedY, comparedU, comparedV))
+        {
+            doUnionOfTrees(labels, labelA, labelB, didAnyLabelChange);
+        }
     }
 }
 
 __global__ void
 ImageComponentLabeling::mergeSolutionsOnBlockBorders(Color::byte* colorY, Color::byte* colorU, Color::byte* colorV,
-                                                     int* labels, std::size_t width, std::size_t height, int tileSide)
+                                                     int* labels, int width, int height, int tileSide)
 {
     //local tileX and Y are stored directly in blockIdx.x and blockIdx.x
     //all threads for each block are stored in the z-dir of each block (threadIdx.z)
-    int rowIdxOfCurrentTile = threadIdx.x + blockIdx.x * blockDim.x;
-    int colIdxOfCurrentTile = threadIdx.y + blockIdx.y * blockDim.y;
-    printf("\n %i %i %i \n", blockIdx.x, blockIdx.y,blockIdx.z);
+    int rowIdxOfCurrentTileInsideBlock = threadIdx.x + blockIdx.x * blockDim.x;
+    int colIdxOfCurrentTileInsideBlock = threadIdx.y + blockIdx.y * blockDim.y;
 
-    int colOfCurrentTilePixel = colIdxOfCurrentTile * tileSide + threadIdx.z;
-    int rowOfCurrentTilePixel = rowIdxOfCurrentTile * tileSide + threadIdx.z;
+    int currentColUsedInHorizontalBorderComparing = colIdxOfCurrentTileInsideBlock * tileSide + threadIdx.z;
+    int currentRowUsedInVerticalBorderComparing = rowIdxOfCurrentTileInsideBlock * tileSide + threadIdx.z;
 
-    if(rowOfCurrentTilePixel < height && colOfCurrentTilePixel < width)
+    if(currentRowUsedInVerticalBorderComparing < height && currentColUsedInHorizontalBorderComparing < width)
     {
-
 
         //the number of times each thread has to be used to process one border of the tile
         int threadIterations = tileSide / blockDim.z;
@@ -81,9 +83,9 @@ ImageComponentLabeling::mergeSolutionsOnBlockBorders(Color::byte* colorY, Color:
         int nextLevelTileSide = tileSide * blockDim.x;
 
         __shared__ int wasAnyNodeLabelChanged[1];
+        int idxLimit = width*height;
 
-        int k = 0;
-        while(++k < 999 && true)
+        while(true)
         {
             if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0)
                 wasAnyNodeLabelChanged[0] = 0;
@@ -93,35 +95,33 @@ ImageComponentLabeling::mergeSolutionsOnBlockBorders(Color::byte* colorY, Color:
             int distanceOfCurrentTilePixelFromBeginningOfTileLine;
             if(threadIdx.x < blockDim.x - 1) //horizontal borders between tiles only
             {
-                int lastRowOfCurrentTile = (rowIdxOfCurrentTile + 1) * tileSide - 1;
+                int lastRowOfCurrentTile = (rowIdxOfCurrentTileInsideBlock + 1) * tileSide - 1;
                 distanceOfCurrentTilePixelFromBeginningOfTileLine = threadIdx.y * tileSide + threadIdx.z;
 
-                if(lastRowOfCurrentTile < height && colOfCurrentTilePixel < width)
+                if(lastRowOfCurrentTile < height && currentColUsedInHorizontalBorderComparing < width)
                 {
                     for(int i = 0; i < threadIterations; ++i)
                     {
-                        std::size_t idxOfCurrentTilePixel = colOfCurrentTilePixel + lastRowOfCurrentTile * width;
+                        int idxOfCurrentTilePixel = currentColUsedInHorizontalBorderComparing +
+                                                    lastRowOfCurrentTile * width;
 
-                        std::size_t idxOfComparedPixel = idxOfCurrentTilePixel + width; //below
+                        int idxOfComparedPixel = idxOfCurrentTilePixel + width; //below
                         checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorY, colorU,
-                                                     colorV, wasAnyNodeLabelChanged);
+                                                     colorV, wasAnyNodeLabelChanged, idxLimit);
 
-                        if(distanceOfCurrentTilePixelFromBeginningOfTileLine >
-                           0) //not the element of leftmost tile column
+                        if(distanceOfCurrentTilePixelFromBeginningOfTileLine > 0)
+                        //not the element of leftmost tile column
                         {
                             idxOfComparedPixel = idxOfCurrentTilePixel + width - 1;
                             checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorY,
-                                                         colorU,
-                                                         colorV, wasAnyNodeLabelChanged);
+                                                         colorU, colorV, wasAnyNodeLabelChanged, idxLimit);
                         }
-                        if(distanceOfCurrentTilePixelFromBeginningOfTileLine <
-                           nextLevelTileSide - 1)//not the element of
-                            //rightmost tile column
+                        if(distanceOfCurrentTilePixelFromBeginningOfTileLine < nextLevelTileSide - 1)
+                        //not the element of rightmost tile column
                         {
                             idxOfComparedPixel = idxOfCurrentTilePixel + width + 1;
                             checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorY,
-                                                         colorU,
-                                                         colorV, wasAnyNodeLabelChanged);
+                                                         colorU, colorV, wasAnyNodeLabelChanged, idxLimit);
                         }
                         lastRowOfCurrentTile += blockDim.z;
                         distanceOfCurrentTilePixelFromBeginningOfTileLine += blockDim.z;
@@ -129,40 +129,41 @@ ImageComponentLabeling::mergeSolutionsOnBlockBorders(Color::byte* colorY, Color:
                 }
             }
 
-            /*if(threadIdx.y < blockDim.y - 1) //vertical borders between tiles only
+            if(threadIdx.y < blockDim.y - 1) //vertical borders between tiles only
             {
-                int lastColOfCurrentTile = (colIdxOfCurrentTile + 1) * tileSide - 1;
+                int lastColOfCurrentTile = (colIdxOfCurrentTileInsideBlock + 1) * tileSide - 1;
                 distanceOfCurrentTilePixelFromBeginningOfTileLine = threadIdx.x * tileSide + threadIdx.z;
-                int rowOfCurrentTilePixel = rowIdxOfCurrentTile * tileSide + threadIdx.z;
 
-                if(rowOfCurrentTilePixel < height && lastColOfCurrentTile < width)
+                if(lastColOfCurrentTile < width && currentRowUsedInVerticalBorderComparing < height)
                 {
                     for(int i = 0; i < threadIterations; ++i)
                     {
-                        std::size_t idxOfCurrentTilePixel = lastColOfCurrentTile + rowOfCurrentTilePixel * width;
+                        int idxOfCurrentTilePixel = lastColOfCurrentTile +
+                                                    currentRowUsedInVerticalBorderComparing * width;
 
-                        std::size_t idxOfComparedPixel = idxOfCurrentTilePixel + 1; //right
+                        int idxOfComparedPixel = idxOfCurrentTilePixel + 1; //right
                         checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorY, colorU,
-                                                     colorV, wasAnyNodeLabelChanged);
+                                                     colorV, wasAnyNodeLabelChanged, idxLimit);
 
-                        if(distanceOfCurrentTilePixelFromBeginningOfTileLine > 0) //not the element of upmost tile row
+                        if(distanceOfCurrentTilePixelFromBeginningOfTileLine > 0)
+                        //not the element of uppermost tile row
                         {
                             idxOfComparedPixel = idxOfCurrentTilePixel - width + 1;
-                            checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorY, colorU,
-                                                         colorV, wasAnyNodeLabelChanged);
+                            checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorY,
+                                                         colorU, colorV, wasAnyNodeLabelChanged, idxLimit);
                         }
-                        if(distanceOfCurrentTilePixelFromBeginningOfTileLine < nextLevelTileSide - 1)//not the element of
-                            //downmost tile row
+                        if(distanceOfCurrentTilePixelFromBeginningOfTileLine < nextLevelTileSide - 1)
+                        //not the element of lowermost tile row
                         {
                             idxOfComparedPixel = idxOfCurrentTilePixel + width + 1;
-                            checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorY, colorU,
-                                                         colorV, wasAnyNodeLabelChanged);
+                            checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorY,
+                                                         colorU, colorV, wasAnyNodeLabelChanged, idxLimit);
                         }
                         lastColOfCurrentTile += blockDim.z;
                         distanceOfCurrentTilePixelFromBeginningOfTileLine += blockDim.z;
                     }
                 }
-            }*/
+            }
             __syncthreads();
 
             if(wasAnyNodeLabelChanged[0] == 0)
@@ -171,7 +172,6 @@ ImageComponentLabeling::mergeSolutionsOnBlockBorders(Color::byte* colorY, Color:
             //need to synchronize here because the wasAnyNodeLabelChanged variable is changed next
             __syncthreads();
         }
-        printf("\n %i \n", k);
     }
 }
 
@@ -260,5 +260,24 @@ ImageComponentLabeling::createLocalComponentLabels(Color::byte* colorY, Color::b
         row = blockIdx.x * blockDim.x + row;
         newLabel = col + row * width;
         output[idx] = newLabel;
+    }
+}
+
+__global__ void ImageComponentLabeling::flattenAllEquivalenceTrees(int* labels, int width, int height)
+{
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    int col = blockIdx.y * blockDim.y + threadIdx.y;
+    if(row < height && col < width)
+    {
+        int idx = col + row * width;
+        int labelOfCurrentElement = labels[idx];
+        if(labelOfCurrentElement != idx)
+        {
+            int newLabel = findRootOfNodeLabel(labels, labelOfCurrentElement);
+            if(newLabel < labelOfCurrentElement)
+            {
+                labels[idx] = newLabel;
+            }
+        }
     }
 }
