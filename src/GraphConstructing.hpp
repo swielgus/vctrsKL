@@ -15,12 +15,10 @@ namespace GraphConstructing
     __device__ int getNeighborRowIdx(int row, GraphEdge direction);
     __device__ int getNeighborColIdx(int col, GraphEdge direction);
 
-    __device__ Graph::byte getConnection(int row, int col, GraphEdge direction, PixelGraphInfo* graphInfo,
-                                         const Color::byte* colorY, const Color::byte* colorU,
-                                         const Color::byte* colorV);
+    __device__ Graph::byte getConnection(int row, int col, GraphEdge direction, const int* labelData, int width,
+                                         int height);
     __global__ void
-    createConnections(PixelGraphInfo* graphInfo, const Color::byte* colorY, const Color::byte* colorU,
-                      const Color::byte* colorV);
+    createConnections(Graph::byte* edges, const int* labelData, int width, int height);
 }
 
 #endif //VCTRSKL_COLOROPERATIONS_HPP

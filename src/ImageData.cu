@@ -35,6 +35,10 @@ const ImageData::color_type* ImageData::getGPUAddressOfVColorData() const
 {
     return d_colorVData;
 }
+const int* ImageData::getGPUAddressOfLabelData() const
+{
+    return d_componentLabels;
+}
 
 std::size_t ImageData::getWidth() const
 {

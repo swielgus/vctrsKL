@@ -98,18 +98,6 @@ TEST_F(PixelGraphTest, shouldConstructAGraphRepresentingA20VerticalZigzag)
     EXPECT_EQ(expectedResult, testedGraph->getEdgeValues());
 }
 
-TEST_F(PixelGraphTest, shouldConstructAComplete3x3GraphFromUniformImage)
-{
-    ImageData testedImage("images/uniform_3x3.png");
-    testedGraph = new PixelGraph(testedImage);
-
-    std::vector<std::vector<color_type>> expectedResult{ {32+16+8, 2+4+8+16+32, 2+4+8},
-                                                         {128+64+32+16+8, 255, 128+1+2+4+8},
-                                                         {128+64+32, 2+1+128+64+32, 2+1+128}};
-
-    EXPECT_EQ(expectedResult, testedGraph->getEdgeValues());
-}
-
 TEST_F(PixelGraphTest, resolvingCrossingsOn1x1GraphShouldNotChangeAnything)
 {
     ImageData testedImage("images/1x1.png");
@@ -182,6 +170,36 @@ TEST_F(PixelGraphTest, resolvingCrossingsOnUniformImageShouldRemoveAllDiagonals)
     EXPECT_EQ(expectedResult, testedGraph->getEdgeValues());
 }
 
+TEST_F(PixelGraphTest, constructingGraphOnAComplicatedImageShouldLeaveOnlyCrossColorCrossings)
+{
+    ImageData testedImage("images/smw_boo_input.png");
+    testedGraph = new PixelGraph(testedImage);
+
+    std::vector<std::vector<color_type>> expectedResult{
+            {40,42,42,42,42,42,38,34,34,34,50,42,42,42,42,42,42,10},
+            {168,170,170,170,166,210,36,34,34,34,18,165,178,170,170,170,170,138},
+            {168,170,170,214,36,66,45,42,42,42,90,33,18,181,170,170,170,138},
+            {168,170,214,68,45,106,170,170,170,170,170,43,90,17,181,170,170,138},
+            {168,202,72,105,182,170,182,170,170,170,166,178,170,75,9,169,170,138},
+            {168,150,132,204,8,201,8,169,170,214,36,18,181,154,144,180,170,138},
+            {200,72,105,138,136,136,136,168,202,72,41,74,9,169,91,17,181,138},
+            {136,136,168,154,128,156,128,172,154,128,172,138,136,168,170,75,9,137},
+            {136,136,168,170,107,170,107,170,170,107,170,138,136,168,170,150,132,140},
+            {136,136,168,182,170,182,170,182,170,170,170,154,128,172,218,80,117,138},
+            {136,136,216,16,213,20,213,20,181,170,170,170,107,170,170,75,9,137},
+            {152,144,180,91,65,93,65,93,1,173,170,170,170,170,170,150,132,140},
+            {168,75,9,169,107,170,107,170,107,170,170,170,170,170,202,72,105,138},
+            {168,154,144,180,170,170,170,170,170,170,170,170,170,166,146,132,172,138},
+            {168,170,91,17,165,178,170,170,170,170,170,166,210,36,66,109,170,138},
+            {168,170,170,91,33,18,165,162,162,162,210,36,66,45,106,170,170,138},
+            {168,170,170,170,43,90,33,34,34,34,66,45,106,170,170,170,170,138},
+            {160,162,162,162,162,162,35,34,34,34,98,162,162,162,162,162,162,130}
+    };
+
+    std::vector<std::vector<color_type>> result = testedGraph->getEdgeValues();
+    EXPECT_EQ(expectedResult, result);
+}
+
 TEST_F(PixelGraphTest, resolvingCrossingsOnACurveTestShouldConstructAFinalGraph)
 {
     ImageData testedImage("images/curveHeuTest.png");
@@ -248,30 +266,31 @@ TEST_F(PixelGraphTest, resolvingCrossingsOnASimpleImageShouldMakeAFinalGraph)
     std::vector<std::vector<color_type>> expectedResult{
             {0,44,42,42,38,34,50,42,10},
             {104,170,170,198,36,34,18,177,138},
-            {104,170,218,64,60,42,10,9,137},
-            {104,170,170,107,170,170,138,136,136},
+            {168,170,218,64,44,42,10,9,137},
+            {168,170,170,107,170,170,138,136,136},
             {168,166,178,170,170,166,130,132,140},
             {216,32,18,161,194,36,66,108,138},
             {168,43,10,1,68,40,106,170,138},
-            {104,170,138,72,16,160,178,170,138},
-            {104,170,154,128,28,33,2,173,138},
+            {168,170,138,72,16,160,178,170,138},
+            {168,170,154,128,28,33,2,173,138},
             {160,162,162,99,162,35,98,162,130}
     };
     testedGraph->resolveCrossings();
 
     std::vector<std::vector<color_type>> result = testedGraph->getEdgeValues();
-    EXPECT_EQ(expectedResult, result);
+    for(int row = 0; row < testedImage.getHeight(); ++row)
+        EXPECT_EQ(expectedResult[row], result[row]);
 }
 
-TEST_F(PixelGraphTest, resolvingCrossingsOnAComplicatedImageShouldLeaveOnlyCrossColorCrossings)
+TEST_F(PixelGraphTest, resolvingCrossingsOnAComplicatedImageShouldGiveAFinalGraph)
 {
     ImageData testedImage("images/smw_boo_input.png");
     testedGraph = new PixelGraph(testedImage);
-    //TODO fix critical crossings
+    //TODO fix rest of critical crossings
     std::vector<std::vector<color_type>> expectedResult{
-            {40,42,42,42,42,42,38,34,34,34,50,42,42,42,42,42,42,10},
-            {168,170,170,170,166,210,36,34,34,34,18,165,178,170,170,170,170,138},
-            {168,170,170,214,36,66,45,42,42,42,90,33,18,181,170,170,170,138},
+            {40, 42, 42, 42, 42, 42, 38,34,34,34,50,42,42,42,42,42,42,10},
+            {168,170,170,170,166,194,36,34,34,34,18,165,178,170,170,170,170,138},
+            {168,170,170,214,36, 66, 44,42,42,42,90,33,18,181,170,170,170,138},
             {168,170,214,68,45,106,170,170,170,170,170,43,90,17,181,170,170,138},
             {168,202,72,105,182,170,182,170,170,170,166,178,170,75,9,169,170,138},
             {168,150,132,204,8,201,8,169,170,214,36,18,181,154,144,180,170,138},
@@ -288,8 +307,56 @@ TEST_F(PixelGraphTest, resolvingCrossingsOnAComplicatedImageShouldLeaveOnlyCross
             {168,170,170,170,43,90,33,34,34,34,66,45,106,170,170,170,170,138},
             {160,162,162,162,162,162,35,34,34,34,98,162,162,162,162,162,162,130}
     };
+    expectedResult[1][11] = 161;
+    expectedResult[2][3] = 198;
+    expectedResult[2][6] = 44;
+    expectedResult[2][10] = 26;
+    expectedResult[2][13] = 177;
+    expectedResult[3][2] = 198;
+    expectedResult[3][4] = 44;
+    expectedResult[3][12] = 26;
+    expectedResult[3][14] = 177;
+    expectedResult[4][3] = 104;
+    expectedResult[4][13] = 11;
+    expectedResult[5][1] = 134;
+    expectedResult[5][9] = 198;
+    expectedResult[5][12] = 177;
+    expectedResult[5][15] = 176;
+    expectedResult[6][2] = 104;
+    expectedResult[6][10] = 40;
+    expectedResult[6][11] = 10;
+    expectedResult[6][14] = 27;
+    expectedResult[6][16] = 177;
+    expectedResult[7][15] = 11;
+    expectedResult[8][15] = 134;
+    expectedResult[9][16] = 112;
+    expectedResult[10][4] = 193;
+    expectedResult[10][6] = 193;
+    expectedResult[10][8] = 177;
+    expectedResult[10][15] = 11;
+    expectedResult[11][2] = 176;
+    expectedResult[11][3] = 27;
+    expectedResult[11][5] = 28;
+    expectedResult[11][7] = 28;
+    expectedResult[11][15] = 134;
+    expectedResult[12][1] = 11;
+    expectedResult[12][16] = 104;
+    expectedResult[13][3] = 176;
+    expectedResult[13][14] = 130;
+    expectedResult[14][2] = 27;
+    expectedResult[14][4] = 161;
+    expectedResult[14][12] = 194;
+    expectedResult[14][15] = 108;
+    expectedResult[15][3] = 27;
+    expectedResult[15][6] = 161;
+    expectedResult[15][10] = 194;
+    expectedResult[15][13] = 44;
+    expectedResult[16][5] = 26;
+    expectedResult[16][11] = 44;
+
     testedGraph->resolveCrossings();
 
     std::vector<std::vector<color_type>> result = testedGraph->getEdgeValues();
-    EXPECT_EQ(expectedResult, result);
+    for(int row = 0; row < testedImage.getHeight(); ++row)
+        EXPECT_EQ(expectedResult[row], result[row]);
 }

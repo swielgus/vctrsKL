@@ -22,35 +22,22 @@ void PixelGraph::freeDeviceData()
 
 void PixelGraph::constructGraph()
 {
-    //cudaEvent_t start, stop;
-    //cudaEventCreate(&start);
-    //cudaEventCreate(&stop);
-
     freeDeviceData();
 
     const std::size_t width = sourceImage.getWidth();
     const std::size_t height = sourceImage.getHeight();
+    const int* addressOfLabelData = sourceImage.getGPUAddressOfLabelData();
     cudaMalloc( &d_pixelConnections, width * height * sizeof(edge_type));
 
-    PixelGraphInfo graphInfo{d_pixelConnections, width, height};
-    cudaMalloc( &d_graphInfo, sizeof(PixelGraphInfo));
-    cudaMemcpy(d_graphInfo, &graphInfo, sizeof(PixelGraphInfo), cudaMemcpyHostToDevice);
+    //PixelGraphInfo graphInfo{d_pixelConnections, width, height};
+    //cudaMalloc( &d_graphInfo, sizeof(PixelGraphInfo));
+    //cudaMemcpy(d_graphInfo, &graphInfo, sizeof(PixelGraphInfo), cudaMemcpyHostToDevice);
 
     dim3 dimBlock(16, 16);
     dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x,
                  (width + dimBlock.y -1)/dimBlock.y);
-
-    //cudaEventRecord(start);
-    GraphConstructing::createConnections<<<dimGrid, dimBlock>>>(d_graphInfo, sourceImage.getGPUAddressOfYColorData(),
-                                                                sourceImage.getGPUAddressOfUColorData(),
-                                                                sourceImage.getGPUAddressOfVColorData());
+    GraphConstructing::createConnections<<<dimGrid, dimBlock>>>(d_pixelConnections, sourceImage.getGPUAddressOfLabelData(), width, height);
     cudaDeviceSynchronize();
-    //cudaEventRecord(stop);
-
-    //cudaEventSynchronize(stop);
-    //float milliseconds = 0;
-    //cudaEventElapsedTime(&milliseconds, start, stop);
-    //printf("time:%f\n", milliseconds);
 }
 
 std::vector< std::vector<PixelGraph::edge_type> > PixelGraph::getEdgeValues() const
@@ -85,9 +72,6 @@ void PixelGraph::resolveCrossings()
     dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x,
                  (width + dimBlock.y -1)/dimBlock.y);
 
-    GraphCrossResolving::removeUnnecessaryCrossings<<<dimGrid, dimBlock>>>(d_graphInfo);
-    cudaDeviceSynchronize();
-
-    GraphCrossResolving::resolveCriticalCrossings<<<dimGrid, dimBlock>>>(d_graphInfo);
+    GraphCrossResolving::resolveCriticalCrossings<<<dimGrid, dimBlock>>>(d_pixelConnections, sourceImage.getGPUAddressOfLabelData(), width, height);
     cudaDeviceSynchronize();
 }

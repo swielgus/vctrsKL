@@ -42,49 +42,59 @@ int GraphConstructing::getNeighborColIdx(int col, GraphEdge direction)
 }
 
 __device__ Graph::byte
-GraphConstructing::getConnection(int row, int col, GraphEdge direction, PixelGraphInfo* graphInfo,
-                                 const Color::byte* colorY, const Color::byte* colorU, const Color::byte* colorV)
+GraphConstructing::getConnection(int row, int col, GraphEdge direction, const int* labelData, int width, int height)
 {
-    std::size_t idx = col + row * graphInfo->width;
+    std::size_t idx = col + row * width;
 
     int neighborRow = GraphConstructing::getNeighborRowIdx(row, direction);
     int neighborCol = GraphConstructing::getNeighborColIdx(col, direction);
 
     Graph::byte result = 0;
-    if( (neighborRow >= 0 && neighborRow < graphInfo->height) && (neighborCol >= 0 && neighborCol < graphInfo->width) )
+    if( (neighborRow >= 0 && neighborRow < height) && (neighborCol >= 0 && neighborCol < width) )
     {
-        std::size_t comparedIdx = neighborCol + neighborRow * graphInfo->width;
-        if( GraphConstructing::areYUVColorsSimilar(colorY[idx], colorU[idx], colorV[idx],
-                                                   colorY[comparedIdx], colorU[comparedIdx], colorV[comparedIdx]))
-            result = static_cast<Graph::byte>(direction);
+        std::size_t comparedIdx = neighborCol + neighborRow * width;
+
+        if( labelData[idx] == labelData[comparedIdx] )
+        {
+            bool isThisEdgeRedundant = false;
+            if( (neighborRow != row) && (neighborCol != col) )
+            {
+                int secondNeighborIdx = col + neighborRow * width;
+                int thirdNeighborIdx = neighborCol + row * width;
+                isThisEdgeRedundant = labelData[secondNeighborIdx] == labelData[thirdNeighborIdx] &&
+                                      labelData[secondNeighborIdx] == labelData[idx];
+            }
+
+            if(!isThisEdgeRedundant)
+                result = static_cast<Graph::byte>(direction);
+        }
     }
     return result;
 }
 
 __global__ void
-GraphConstructing::createConnections(PixelGraphInfo* graphInfo, const Color::byte* colorY,
-                                     const Color::byte* colorU, const Color::byte* colorV)
+GraphConstructing::createConnections(Graph::byte* edges, const int* labelData, int width, int height)
 {
-    int i = threadIdx.x + (blockIdx.x * blockDim.x);
-    int j = threadIdx.y + (blockIdx.y * blockDim.y);
-    if(i < graphInfo->height && j < graphInfo->width)
+    int row = threadIdx.x + (blockIdx.x * blockDim.x);
+    int col = threadIdx.y + (blockIdx.y * blockDim.y);
+    if(row < height && col < width)
     {
-        std::size_t idx = j + i * graphInfo->width;
-        graphInfo->edges[idx] = 0;
+        int idx = col + row * width;
+        Graph::byte currentNodeEdgeValues = 0;
 
-        graphInfo->edges[idx] += GraphConstructing::getConnection(i, j, GraphEdge::UP, graphInfo,
-                                                                  colorY, colorU, colorV);
-        graphInfo->edges[idx] += GraphConstructing::getConnection(i, j, GraphEdge::DOWN, graphInfo,
-                                                                  colorY, colorU, colorV);
-        graphInfo->edges[idx] += GraphConstructing::getConnection(i, j, GraphEdge::LEFT, graphInfo,
-                                                                  colorY, colorU, colorV);
-        graphInfo->edges[idx] += GraphConstructing::getConnection(i, j, GraphEdge::RIGHT, graphInfo,
-                                                                  colorY, colorU, colorV);
-        graphInfo->edges[idx] += GraphConstructing::getConnection(i, j, GraphEdge::UPPER_RIGHT, graphInfo,
-                                                                  colorY, colorU, colorV);
-        graphInfo->edges[idx] += GraphConstructing::getConnection(i, j, GraphEdge::UPPER_LEFT, graphInfo,
-                                                                  colorY, colorU, colorV);
-        graphInfo->edges[idx] += GraphConstructing::getConnection(i, j, GraphEdge::LOWER_RIGHT, graphInfo, colorY, colorU, colorV);
-        graphInfo->edges[idx] += GraphConstructing::getConnection(i, j, GraphEdge::LOWER_LEFT, graphInfo, colorY, colorU, colorV);
+        currentNodeEdgeValues += GraphConstructing::getConnection(row, col, GraphEdge::UP, labelData, width, height);
+        currentNodeEdgeValues += GraphConstructing::getConnection(row, col, GraphEdge::DOWN, labelData, width, height);
+        currentNodeEdgeValues += GraphConstructing::getConnection(row, col, GraphEdge::LEFT, labelData, width, height);
+        currentNodeEdgeValues += GraphConstructing::getConnection(row, col, GraphEdge::RIGHT, labelData, width, height);
+        currentNodeEdgeValues += GraphConstructing::getConnection(row, col, GraphEdge::UPPER_RIGHT, labelData, width,
+                                                                  height);
+        currentNodeEdgeValues += GraphConstructing::getConnection(row, col, GraphEdge::UPPER_LEFT, labelData, width,
+                                                                  height);
+        currentNodeEdgeValues += GraphConstructing::getConnection(row, col, GraphEdge::LOWER_RIGHT, labelData, width,
+                                                                  height);
+        currentNodeEdgeValues += GraphConstructing::getConnection(row, col, GraphEdge::LOWER_LEFT, labelData, width,
+                                                                  height);
+
+        edges[idx] = currentNodeEdgeValues;
     }
 }

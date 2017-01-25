@@ -29,6 +29,7 @@ public:
     const color_type* getGPUAddressOfYColorData() const;
     const color_type* getGPUAddressOfUColorData() const;
     const color_type* getGPUAddressOfVColorData() const;
+    const int* getGPUAddressOfLabelData() const;
 
     std::vector< std::vector<int> > getLabelValues() const;
 private:

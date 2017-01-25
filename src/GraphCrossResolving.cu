@@ -46,51 +46,6 @@ __device__ void GraphCrossResolving::removeEdgeConnection(Graph::byte& nodeEdges
     GraphCrossResolving::doAtomicAnd(&nodeEdges, ~static_cast<Graph::byte>(direction));
 }
 
-__global__ void GraphCrossResolving::removeUnnecessaryCrossings(PixelGraphInfo* graphInfo)
-{
-    int row = threadIdx.x + (blockIdx.x * blockDim.x);
-    int col = threadIdx.y + (blockIdx.y * blockDim.y);
-    if(row < graphInfo->height - 1 && col < graphInfo->width - 1)
-    {
-        std::size_t idx = col + row * graphInfo->width;
-
-        Graph::byte upperLeftConnected[12]  = {255, 48,  24,  255, 56,  255, 255, 255, 255, 40,  40,  255};
-        Graph::byte lowerLeftConnected[12]  = {96,  255, 255, 192, 255, 255, 224, 255, 255, 160, 255, 160};
-        Graph::byte upperRightConnected[12] = {6,   255, 255, 12,  255, 14,  255, 255, 10,  255, 10,  255};
-        Graph::byte lowerRightConnected[12] = {255, 3,   129, 255, 255, 255, 255, 131, 130, 255, 255, 130};
-
-        int k = 0;
-        bool squareIsNotConnected = true;
-        while(k < 12 && squareIsNotConnected)
-        {
-            squareIsNotConnected = !(
-                ((upperLeftConnected[k] == 255) || ((upperLeftConnected[k] & graphInfo->edges[idx]) == upperLeftConnected[k])) &&
-                ((upperRightConnected[k] == 255) || ((upperRightConnected[k] & graphInfo->edges[idx + 1]) == upperRightConnected[k])) &&
-                ((lowerLeftConnected[k] == 255) || ((lowerLeftConnected[k] & graphInfo->edges[idx + graphInfo->width]) == lowerLeftConnected[k])) &&
-                ((lowerRightConnected[k] == 255) || ((lowerRightConnected[k] & graphInfo->edges[idx + graphInfo->width + 1]) == lowerRightConnected[k]))
-            );
-            ++k;
-        }
-
-        if(!squareIsNotConnected)
-        {
-            GraphCrossResolving::addEdgeConnection(graphInfo->edges[idx], GraphEdge::RIGHT);
-            GraphCrossResolving::addEdgeConnection(graphInfo->edges[idx], GraphEdge::DOWN);
-            GraphCrossResolving::addEdgeConnection(graphInfo->edges[idx + 1], GraphEdge::DOWN);
-            GraphCrossResolving::addEdgeConnection(graphInfo->edges[idx + 1], GraphEdge::LEFT);
-            GraphCrossResolving::addEdgeConnection(graphInfo->edges[idx + graphInfo->width], GraphEdge::RIGHT);
-            GraphCrossResolving::addEdgeConnection(graphInfo->edges[idx + graphInfo->width], GraphEdge::UP);
-            GraphCrossResolving::addEdgeConnection(graphInfo->edges[idx + graphInfo->width + 1], GraphEdge::LEFT);
-            GraphCrossResolving::addEdgeConnection(graphInfo->edges[idx + graphInfo->width + 1], GraphEdge::UP);
-
-            GraphCrossResolving::removeEdgeConnection(graphInfo->edges[idx + 1], GraphEdge::LOWER_LEFT);
-            GraphCrossResolving::removeEdgeConnection(graphInfo->edges[idx + graphInfo->width], GraphEdge::UPPER_RIGHT);
-            GraphCrossResolving::removeEdgeConnection(graphInfo->edges[idx], GraphEdge::LOWER_RIGHT);
-            GraphCrossResolving::removeEdgeConnection(graphInfo->edges[idx + graphInfo->width + 1], GraphEdge::UPPER_LEFT);
-        }
-    }
-}
-
 __device__ bool GraphCrossResolving::isThereAnEdge(const Graph::byte& nodeEdges, GraphEdge direction)
 {
     return nodeEdges & static_cast<Graph::byte>(direction);
@@ -175,7 +130,7 @@ __device__ GraphEdge GraphCrossResolving::getOppositeDirection(GraphEdge directi
 }
 
 __device__ int GraphCrossResolving::getLengthOfPathComponent(int row, int col, GraphEdge secondaryNodeDirection,
-                                                             PixelGraphInfo* graphInfo)
+                                                             Graph::byte* edges, int width, int height)
 {
     int secondaryNodeRow = GraphCrossResolving::getNeighborRowIdx(row, secondaryNodeDirection);
     int secondaryNodeCol = GraphCrossResolving::getNeighborColIdx(col, secondaryNodeDirection);
@@ -184,11 +139,11 @@ __device__ int GraphCrossResolving::getLengthOfPathComponent(int row, int col, G
     int result = 1;
     bool wasSecondaryNodeVisited = false;
 
-    std::size_t currentIdx = col + row * graphInfo->width;
-    while( !wasSecondaryNodeVisited && GraphCrossResolving::getNodeDegree(graphInfo->edges[currentIdx]) == 2 )
+    int currentIdx = col + row * width;
+    while( !wasSecondaryNodeVisited && GraphCrossResolving::getNodeDegree(edges[currentIdx]) == 2 )
     {
         GraphEdge directionOfNextNode = GraphCrossResolving::getNeighborInDirectionOtherThanGiven(
-                graphInfo->edges[currentIdx],
+                edges[currentIdx],
                 previousDirection);
 
         previousDirection = GraphCrossResolving::getOppositeDirection(directionOfNextNode);
@@ -197,27 +152,27 @@ __device__ int GraphCrossResolving::getLengthOfPathComponent(int row, int col, G
 
         wasSecondaryNodeVisited = (row == secondaryNodeRow) && (col == secondaryNodeCol);
 
-        currentIdx = col + row * graphInfo->width;
+        currentIdx = col + row * width;
         ++result;
     }
 
     if(!wasSecondaryNodeVisited)
     {
-        currentIdx = secondaryNodeCol + secondaryNodeRow * graphInfo->width;
+        currentIdx = secondaryNodeCol + secondaryNodeRow * width;
         previousDirection = GraphCrossResolving::getOppositeDirection(secondaryNodeDirection);
         row = secondaryNodeRow;
         col = secondaryNodeCol;
 
-        while(getNodeDegree(graphInfo->edges[currentIdx]) == 2)
+        while(getNodeDegree(edges[currentIdx]) == 2)
         {
             GraphEdge directionOfNextNode = GraphCrossResolving::getNeighborInDirectionOtherThanGiven(
-                    graphInfo->edges[currentIdx],
+                    edges[currentIdx],
                     previousDirection);
             previousDirection = GraphCrossResolving::getOppositeDirection(directionOfNextNode);
             row = GraphCrossResolving::getNeighborRowIdx(row, directionOfNextNode);
             col = GraphCrossResolving::getNeighborColIdx(col, directionOfNextNode);
 
-            currentIdx = col + row * graphInfo->width;
+            currentIdx = col + row * width;
             ++result;
         }
     }
@@ -225,34 +180,44 @@ __device__ int GraphCrossResolving::getLengthOfPathComponent(int row, int col, G
 }
 
 __device__ int GraphCrossResolving::getSizeOfConnectedComponent(int row, int col, GraphEdge secondaryNodeDirection,
-                                                                const std::size_t& radius, PixelGraphInfo* graphInfo)
+                                                                const int radius, const int* labelData,
+                                                                int width, int height)
 {
-    const std::size_t checkedRectangleSide = 2 * radius + 1;
-    bool* wasNodeVisited = new bool[checkedRectangleSide * checkedRectangleSide];
-    //cudaMalloc( &wasNodeVisited, checkedRectangleSide * checkedRectangleSide * sizeof(bool));
-    for(int i = 0; i < checkedRectangleSide * checkedRectangleSide; ++i)
-        wasNodeVisited[i] = false;
+    int result = 0;
+    int idx = col + row * width;
+    int labelDataOfCurrentNode = labelData[idx];
 
-    wasNodeVisited[radius + radius * checkedRectangleSide] = true;
-    int result = 1;
+    int rowOfDiagonalNeighbor = getNeighborRowIdx(row, secondaryNodeDirection);
+    int colOfDiagonalNeighbor = getNeighborColIdx(col, secondaryNodeDirection);
+    row = min(row, rowOfDiagonalNeighbor);
+    col = min(col, colOfDiagonalNeighbor);
 
+    for(int rowDiff = -radius; rowDiff <= radius+1; ++rowDiff)
+    for(int colDiff = -radius; colDiff <= radius+1; ++colDiff)
+    {
+        int currentRow = row + rowDiff;
+        int currentCol = col + colDiff;
+        if(currentCol >= 0 && currentCol < width && currentRow >=0 && currentRow < height)
+        {
+            result += (labelDataOfCurrentNode == labelData[currentCol + currentRow * width]);
+        }
+    }
 
-
-
-    delete[] wasNodeVisited;
-    //cudaFree(wasNodeVisited);
     return result;
 }
 
-__global__ void GraphCrossResolving::resolveCriticalCrossings(PixelGraphInfo* graphInfo)
+__global__ void GraphCrossResolving::resolveCriticalCrossings(Graph::byte* edges, const int* labelData, int width,
+                                                              int height)
 {
     int row = threadIdx.x + (blockIdx.x * blockDim.x);
     int col = threadIdx.y + (blockIdx.y * blockDim.y);
-    if(row < graphInfo->height - 1 && col < graphInfo->width - 1)
+    if(row < height - 1 && col < width - 1)
     {
-        std::size_t idx = col + row * graphInfo->width;
-        bool isThereACrossing = GraphCrossResolving::isThereAnEdge(graphInfo->edges[idx], GraphEdge::LOWER_RIGHT) &&
-                                GraphCrossResolving::isThereAnEdge(graphInfo->edges[idx + 1], GraphEdge::LOWER_LEFT);
+        int idx = col + row * width;
+        Graph::byte edgeValuesOfCurrentNode = edges[idx];
+
+        bool isThereACrossing = GraphCrossResolving::isThereAnEdge(edgeValuesOfCurrentNode, GraphEdge::LOWER_RIGHT) &&
+                                GraphCrossResolving::isThereAnEdge(edges[idx + 1], GraphEdge::LOWER_LEFT);
         if(isThereACrossing)
         {
             int weightOfDiagonalLeftURightD = 0;
@@ -266,17 +231,17 @@ __global__ void GraphCrossResolving::resolveCriticalCrossings(PixelGraphInfo* gr
 
             //island heuristic
             weightOfDiagonalLeftURightD +=
-                GraphCrossResolving::isThereAnIslandNode(graphInfo->edges[idx],
-                                                         graphInfo->edges[idx + graphInfo->width + 1]) * islandHeuristicMultiplier;
+                GraphCrossResolving::isThereAnIslandNode(edgeValuesOfCurrentNode,
+                                                         edges[idx + width + 1]) * islandHeuristicMultiplier;
             weightOfDiagonalLeftDRightU +=
-                GraphCrossResolving::isThereAnIslandNode(graphInfo->edges[idx + graphInfo->width],
-                                                         graphInfo->edges[idx + 1]) * islandHeuristicMultiplier;
+                GraphCrossResolving::isThereAnIslandNode(edges[idx + width],
+                                                         edges[idx + 1]) * islandHeuristicMultiplier;
 
             //curve heuristic
             int lengthOfLeftURightDCurve =
-                    GraphCrossResolving::getLengthOfPathComponent(row,col,GraphEdge::LOWER_RIGHT, graphInfo);
+                    GraphCrossResolving::getLengthOfPathComponent(row,col,GraphEdge::LOWER_RIGHT, edges, width, height);
             int lengthOfLeftDRightUCurve =
-                    GraphCrossResolving::getLengthOfPathComponent(row+1,col,GraphEdge::UPPER_RIGHT, graphInfo);
+                    GraphCrossResolving::getLengthOfPathComponent(row+1,col,GraphEdge::UPPER_RIGHT, edges, width, height);
 
             if(lengthOfLeftURightDCurve > lengthOfLeftDRightUCurve)
                 weightOfDiagonalLeftURightD +=
@@ -288,10 +253,12 @@ __global__ void GraphCrossResolving::resolveCriticalCrossings(PixelGraphInfo* gr
             //sparse pixels heuristic
             int sizeOfLeftURightDComponent = GraphCrossResolving::getSizeOfConnectedComponent(row, col,
                                                                                               GraphEdge::LOWER_RIGHT,
-                                                                                              sparsePixelsRadius, graphInfo);
+                                                                                              sparsePixelsRadius,
+                                                                                              labelData, width, height);
             int sizeOfLeftDRightUComponent = GraphCrossResolving::getSizeOfConnectedComponent(row+1, col,
                                                                                               GraphEdge::UPPER_RIGHT,
-                                                                                              sparsePixelsRadius, graphInfo);
+                                                                                              sparsePixelsRadius,
+                                                                                              labelData, width, height);
             if(sizeOfLeftURightDComponent > sizeOfLeftDRightUComponent)
                 weightOfDiagonalLeftDRightU +=
                         (sizeOfLeftURightDComponent - sizeOfLeftDRightUComponent) * sparsePixelsMultiplier;
@@ -302,20 +269,20 @@ __global__ void GraphCrossResolving::resolveCriticalCrossings(PixelGraphInfo* gr
 
             if(weightOfDiagonalLeftURightD > weightOfDiagonalLeftDRightU)
             {
-                removeEdgeConnection(graphInfo->edges[idx + 1], GraphEdge::LOWER_LEFT);
-                removeEdgeConnection(graphInfo->edges[idx + graphInfo->width], GraphEdge::UPPER_RIGHT);
+                removeEdgeConnection(edges[idx + 1], GraphEdge::LOWER_LEFT);
+                removeEdgeConnection(edges[idx + width], GraphEdge::UPPER_RIGHT);
             }
             else if(weightOfDiagonalLeftURightD < weightOfDiagonalLeftDRightU)
             {
-                removeEdgeConnection(graphInfo->edges[idx], GraphEdge::LOWER_RIGHT);
-                removeEdgeConnection(graphInfo->edges[idx + graphInfo->width + 1], GraphEdge::UPPER_LEFT);
+                removeEdgeConnection(edges[idx], GraphEdge::LOWER_RIGHT);
+                removeEdgeConnection(edges[idx + width + 1], GraphEdge::UPPER_LEFT);
             }
             else
             {
-                removeEdgeConnection(graphInfo->edges[idx + 1], GraphEdge::LOWER_LEFT);
-                removeEdgeConnection(graphInfo->edges[idx + graphInfo->width], GraphEdge::UPPER_RIGHT);
-                removeEdgeConnection(graphInfo->edges[idx], GraphEdge::LOWER_RIGHT);
-                removeEdgeConnection(graphInfo->edges[idx + graphInfo->width + 1], GraphEdge::UPPER_LEFT);
+                removeEdgeConnection(edges[idx + 1], GraphEdge::LOWER_LEFT);
+                removeEdgeConnection(edges[idx + width], GraphEdge::UPPER_RIGHT);
+                removeEdgeConnection(edges[idx], GraphEdge::LOWER_RIGHT);
+                removeEdgeConnection(edges[idx + width + 1], GraphEdge::UPPER_LEFT);
             }
         }
     }

@@ -20,13 +20,12 @@ namespace GraphCrossResolving
     __device__ GraphEdge getNeighborInDirectionOtherThanGiven(const Graph::byte& nodeEdges,
                                                               const GraphEdge forbiddenDirection);
     __device__ GraphEdge getOppositeDirection(GraphEdge direction);
-    __device__ int  getLengthOfPathComponent(int row, int col, GraphEdge secondaryNodeDirection,
-                                             PixelGraphInfo* graphInfo);
+    __device__ int  getLengthOfPathComponent(int row, int col, GraphEdge secondaryNodeDirection, Graph::byte* edges,
+                                             int width, int height);
     __device__ int getSizeOfConnectedComponent(int row, int col, GraphEdge secondaryNodeDirection,
-                                               const std::size_t& radius, PixelGraphInfo* graphInfo);
+                                               const int radius, const int* labelData, int width, int height);
 
-    __global__ void removeUnnecessaryCrossings(PixelGraphInfo* graphInfo);
-    __global__ void resolveCriticalCrossings(PixelGraphInfo* graphInfo);
+    __global__ void resolveCriticalCrossings(Graph::byte* edges, const int* labelData, int width, int height);
 }
 
 #endif //VCTRSKL_GRAPHCROSSRESOLVING_HPP
