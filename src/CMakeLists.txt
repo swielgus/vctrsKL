@@ -25,4 +25,8 @@ cuda_add_library(GraphConstructing GraphConstructing.cu)
 cuda_add_library(GraphCrossResolving GraphCrossResolving.cu)
 
 cuda_add_library(PixelGraph PixelGraph.cu)
-target_link_libraries(PixelGraph GraphConstructing GraphCrossResolving ImageData  )
+target_link_libraries(PixelGraph GraphConstructing GraphCrossResolving ImageData)
+
+cuda_add_library(CellMapConstructing CellMapConstructing.cu)
+cuda_add_library(CellMap CellMap.cu)
+target_link_libraries(CellMap PixelGraph CellMapConstructing)

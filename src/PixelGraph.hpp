@@ -17,6 +17,9 @@ public:
     void resolveDisconnectingDiagonals();
     void resolveCrossings();
     std::vector<std::vector<color_type> > getEdgeValues() const;
+    const edge_type* getGPUAddressOfGraphData() const;
+    std::size_t getWidth() const;
+    std::size_t getHeight() const;
 private:
     const ImageData& sourceImage;
     edge_type* d_pixelConnections;

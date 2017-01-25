@@ -360,3 +360,22 @@ TEST_F(PixelGraphTest, resolvingCrossingsOnAComplicatedImageShouldGiveAFinalGrap
     for(std::size_t row = 0; row < testedImage.getHeight(); ++row)
         EXPECT_EQ(expectedResult[row], result[row]);
 }
+
+TEST_F(PixelGraphTest, resolvingCrossingsOnCloselyButNotTransitivelyRelatedColorsShouldGreateAGraphWithOneLonelyPoint)
+{
+    ImageData testedImage("images/closeColorsTransitiveComponent.png");
+    testedGraph = new PixelGraph(testedImage);
+
+    std::vector< std::vector<color_type> > expectedResult{
+            {40,42,42,42,10},
+            {168,170,170,170,138},
+            {168,170,170,170,138},
+            {168,170,170,170,134},
+            {160,162,162,194,0},
+    };
+
+    std::vector< std::vector<color_type> > actualResult = testedGraph->getEdgeValues();
+
+    for(int row = 0; row < 5; ++row)
+        EXPECT_EQ(expectedResult[row], actualResult[row]);
+}

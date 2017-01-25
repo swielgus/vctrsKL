@@ -1,7 +1,6 @@
 #ifndef VCTRSKL_IMAGEDATA_HPP
 #define VCTRSKL_IMAGEDATA_HPP
 
-#include <cstddef>
 #include <png++/png.hpp>
 #include "Constants.hpp"
 

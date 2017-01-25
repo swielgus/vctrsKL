@@ -14,6 +14,21 @@ PixelGraph::~PixelGraph()
     //cudaDeviceReset();
 }
 
+const PixelGraph::edge_type* PixelGraph::getGPUAddressOfGraphData() const
+{
+    return d_pixelConnections;
+}
+
+std::size_t PixelGraph::getWidth() const
+{
+    return sourceImage.getWidth();
+}
+
+std::size_t PixelGraph::getHeight() const
+{
+    return sourceImage.getHeight();
+}
+
 void PixelGraph::freeDeviceData()
 {
     cudaFree(d_pixelConnections);
@@ -23,8 +38,8 @@ void PixelGraph::constructGraph()
 {
     freeDeviceData();
 
-    const std::size_t width = sourceImage.getWidth();
-    const std::size_t height = sourceImage.getHeight();
+    const std::size_t width = getWidth();
+    const std::size_t height = getHeight();
     const int* addressOfLabelData = sourceImage.getGPUAddressOfLabelData();
     cudaMalloc( &d_pixelConnections, width * height * sizeof(edge_type));
 
@@ -37,8 +52,8 @@ void PixelGraph::constructGraph()
 
 std::vector< std::vector<PixelGraph::edge_type> > PixelGraph::getEdgeValues() const
 {
-    const std::size_t width = sourceImage.getWidth();
-    const std::size_t height = sourceImage.getHeight();
+    const std::size_t width = getWidth();
+    const std::size_t height = getHeight();
 
     std::vector< std::vector<edge_type> > result;
     result.resize(height);
@@ -61,8 +76,8 @@ std::vector< std::vector<PixelGraph::edge_type> > PixelGraph::getEdgeValues() co
 
 void PixelGraph::resolveCrossings()
 {
-    const std::size_t width = sourceImage.getWidth();
-    const std::size_t height = sourceImage.getHeight();
+    const std::size_t width = getWidth();
+    const std::size_t height = getHeight();
     dim3 dimBlock(32, 32);
     dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x,
                  (width + dimBlock.y -1)/dimBlock.y);
@@ -70,5 +85,5 @@ void PixelGraph::resolveCrossings()
     GraphCrossResolving::resolveCriticalCrossings<<<dimGrid, dimBlock>>>(d_pixelConnections, sourceImage.getGPUAddressOfLabelData(), width, height);
     cudaDeviceSynchronize();
 
-    //TODO update labels after disconnecting components via crossing resolving
+    //TODO (opt) update labels after disconnecting components via crossing resolving
 }
