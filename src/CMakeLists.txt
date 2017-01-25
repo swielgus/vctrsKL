@@ -21,12 +21,8 @@ cuda_add_library(ImageComponentLabeling ImageComponentLabeling.cu)
 cuda_add_library(ImageData ImageData.cu)
 target_link_libraries(ImageData ${PNG_LIBRARY} ImageComponentLabeling)
 
-cuda_add_library(PixelGraphInfo PixelGraphInfo.cu)
-
 cuda_add_library(GraphConstructing GraphConstructing.cu)
-target_link_libraries(GraphConstructing PixelGraphInfo)
 cuda_add_library(GraphCrossResolving GraphCrossResolving.cu)
-target_link_libraries(GraphCrossResolving PixelGraphInfo)
 
 cuda_add_library(PixelGraph PixelGraph.cu)
-target_link_libraries(PixelGraph PixelGraphInfo GraphConstructing GraphCrossResolving ImageData  )
+target_link_libraries(PixelGraph GraphConstructing GraphCrossResolving ImageData  )

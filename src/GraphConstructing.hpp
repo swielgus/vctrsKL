@@ -4,7 +4,6 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include "Constants.hpp"
-#include "PixelGraphInfo.hpp"
 
 namespace GraphConstructing
 {

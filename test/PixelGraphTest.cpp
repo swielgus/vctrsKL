@@ -278,7 +278,7 @@ TEST_F(PixelGraphTest, resolvingCrossingsOnASimpleImageShouldMakeAFinalGraph)
     testedGraph->resolveCrossings();
 
     std::vector<std::vector<color_type>> result = testedGraph->getEdgeValues();
-    for(int row = 0; row < testedImage.getHeight(); ++row)
+    for(std::size_t row = 0; row < testedImage.getHeight(); ++row)
         EXPECT_EQ(expectedResult[row], result[row]);
 }
 
@@ -357,6 +357,6 @@ TEST_F(PixelGraphTest, resolvingCrossingsOnAComplicatedImageShouldGiveAFinalGrap
     testedGraph->resolveCrossings();
 
     std::vector<std::vector<color_type>> result = testedGraph->getEdgeValues();
-    for(int row = 0; row < testedImage.getHeight(); ++row)
+    for(std::size_t row = 0; row < testedImage.getHeight(); ++row)
         EXPECT_EQ(expectedResult[row], result[row]);
 }

@@ -2,7 +2,6 @@
 #define VCTRSKL_PIXELGRAPH_HPP
 
 #include "ImageData.hpp"
-#include "PixelGraphInfo.hpp"
 
 class PixelGraph
 {
@@ -21,7 +20,6 @@ public:
 private:
     const ImageData& sourceImage;
     edge_type* d_pixelConnections;
-    PixelGraphInfo* d_graphInfo;
 
     void freeDeviceData();
     void constructGraph();

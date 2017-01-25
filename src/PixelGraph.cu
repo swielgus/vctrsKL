@@ -3,7 +3,7 @@
 #include "GraphConstructing.hpp"
 
 PixelGraph::PixelGraph(const ImageData& image)
-    : sourceImage{image}, d_pixelConnections{nullptr}, d_graphInfo{nullptr}
+    : sourceImage{image}, d_pixelConnections{nullptr}
 {
     constructGraph();
 }
@@ -17,7 +17,6 @@ PixelGraph::~PixelGraph()
 void PixelGraph::freeDeviceData()
 {
     cudaFree(d_pixelConnections);
-    cudaFree(d_graphInfo);
 }
 
 void PixelGraph::constructGraph()
@@ -28,10 +27,6 @@ void PixelGraph::constructGraph()
     const std::size_t height = sourceImage.getHeight();
     const int* addressOfLabelData = sourceImage.getGPUAddressOfLabelData();
     cudaMalloc( &d_pixelConnections, width * height * sizeof(edge_type));
-
-    //PixelGraphInfo graphInfo{d_pixelConnections, width, height};
-    //cudaMalloc( &d_graphInfo, sizeof(PixelGraphInfo));
-    //cudaMemcpy(d_graphInfo, &graphInfo, sizeof(PixelGraphInfo), cudaMemcpyHostToDevice);
 
     dim3 dimBlock(16, 16);
     dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x,
@@ -74,4 +69,6 @@ void PixelGraph::resolveCrossings()
 
     GraphCrossResolving::resolveCriticalCrossings<<<dimGrid, dimBlock>>>(d_pixelConnections, sourceImage.getGPUAddressOfLabelData(), width, height);
     cudaDeviceSynchronize();
+
+    //TODO update labels after disconnecting components via crossing resolving
 }
