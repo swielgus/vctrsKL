@@ -5,8 +5,7 @@
 
 namespace CellMapConstructing
 {
-    __device__ bool isThereAnEdge(const Graph::byte& nodeEdges, GraphEdge direction);
-    __device__ Cell::byte getTypeASideValueForGivenQuarter(const GraphEdge quarterDirection);
+    /*__device__ Cell::byte getTypeASideValueForGivenQuarter(const GraphEdge quarterDirection);
     __device__ Cell::byte getTypeBSideValueForGivenQuarter(const GraphEdge quarterDirection);
     __device__ Cell::byte getTypeCSideValueForGivenQuarter(const GraphEdge quarterDirection);
     __device__ GraphEdge getTypeBEdgeToCheckInGivenQuarter(const GraphEdge quarterDirection);
@@ -14,8 +13,12 @@ namespace CellMapConstructing
     __device__ bool isThisSideTypeB(int row, int col, const Graph::byte* graphData, const GraphEdge quarterDirection,
                                     int width);
     __device__ Cell::byte getQuarterOfCellSide(int row, int col, const Graph::byte* graphData,
-                                               const GraphEdge quarterDirection, int width, int height);
-    __global__ void createCells(Cell::byte* d_cellData, const Graph::byte* graphData, int width, int height);
+                                               const GraphEdge quarterDirection, int width, int height);*/
+
+    __device__ bool isThereAnEdge(const Graph::byte& nodeEdges, GraphEdge direction);
+    __device__ bool isThisQuarterForwardSlash(int row, int col, int graphWidth, const Graph::byte* graphData);
+    __device__ bool isThisQuarterBackslash(int row, int col, int graphWidth, const Graph::byte* graphData);
+    __global__ void createCells(CellSide* cellData, const Graph::byte* graphData, int width, int height);
 }
 
 #endif //VCTRSKL_CELLMAPCONSTRUCTING_HPP

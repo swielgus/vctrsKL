@@ -7,16 +7,16 @@
 class CellMap
 {
 public:
-    using cell_type = Cell::byte;
+    using cell_type = CellSideType;
 
     CellMap() = delete;
     CellMap(const PixelGraph& graph);
     ~CellMap();
 
-    std::vector< std::vector<cell_type> > getCellValues() const;
+    std::vector< std::vector<CellSideType> > getCellTypes() const;
 private:
     const PixelGraph& sourceGraph;
-    cell_type* d_cellData;
+    CellSide* d_cellData;
 
     void freeDeviceData();
     void constructPixelCells();

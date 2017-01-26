@@ -17,23 +17,23 @@ void CellMap::freeDeviceData()
     cudaFree(d_cellData);
 }
 
-std::vector< std::vector<CellMap::cell_type> > CellMap::getCellValues() const
+std::vector< std::vector<CellSideType> > CellMap::getCellTypes() const
 {
-    const std::size_t width = sourceGraph.getWidth();
-    const std::size_t height = sourceGraph.getHeight();
+    const std::size_t width = sourceGraph.getWidth() + 1;
+    const std::size_t height = sourceGraph.getHeight() + 1;
 
-    std::vector< std::vector<cell_type> > result;
+    std::vector< std::vector<CellSideType> > result;
     result.resize(height);
     for(std::vector<cell_type>& row : result)
         row.resize(width);
 
-    cell_type* cellSideValues = new cell_type[width * height];
-    cudaMemcpy(cellSideValues, d_cellData, width * height * sizeof(cell_type), cudaMemcpyDeviceToHost);
+    CellSide* cellSideValues = new CellSide[width * height];
+    cudaMemcpy(cellSideValues, d_cellData, width * height * sizeof(CellSide), cudaMemcpyDeviceToHost);
 
     for(std::size_t x = 0; x < height; ++x)
         for(std::size_t y = 0; y < width; ++y)
         {
-            result[x][y] = *(cellSideValues + (y + x * width));
+            result[x][y] = (cellSideValues + (y + x * width))->type;
         }
 
     delete[] cellSideValues;
@@ -43,9 +43,9 @@ std::vector< std::vector<CellMap::cell_type> > CellMap::getCellValues() const
 
 void CellMap::constructPixelCells()
 {
-    const std::size_t width = sourceGraph.getWidth();
-    const std::size_t height = sourceGraph.getHeight();
-    cudaMalloc( &d_cellData, width * height * sizeof(cell_type));
+    const std::size_t width = sourceGraph.getWidth() + 1;
+    const std::size_t height = sourceGraph.getHeight() + 1;
+    cudaMalloc( &d_cellData, width * height * sizeof(CellSide));
 
     const PixelGraph::edge_type* d_graphData = sourceGraph.getGPUAddressOfGraphData();
 

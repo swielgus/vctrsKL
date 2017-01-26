@@ -16,6 +16,7 @@ namespace Graph
 namespace Cell
 {
     using byte = uint8_t;
+    using cord_type = float;
 }
 
 enum class GraphEdge : Graph::byte
@@ -30,28 +31,16 @@ enum class GraphEdge : Graph::byte
     UP          = 1 << 7
 };
 
-enum class CellSide : Cell::byte
+enum class CellSideType : Cell::byte
 {
-    /*
-     * TYPE A: /
-     * TYPE B: \
-     * TYPE C: .
-     */
-    UPPER_LEFT_TYPE_A = 1 << 0,
-    UPPER_LEFT_TYPE_B = 2 << 0,
-    UPPER_LEFT_TYPE_C = 3 << 0,
+    Backslash, ForwardSlash, Point
+};
 
-    LOWER_LEFT_TYPE_A = 1 << 2,
-    LOWER_LEFT_TYPE_B = 2 << 2,
-    LOWER_LEFT_TYPE_C = 3 << 2,
-
-    LOWER_RIGHT_TYPE_A = 1 << 4,
-    LOWER_RIGHT_TYPE_B = 2 << 4,
-    LOWER_RIGHT_TYPE_C = 3 << 4,
-
-    UPPER_RIGHT_TYPE_A = 1 << 6,
-    UPPER_RIGHT_TYPE_B = 2 << 6,
-    UPPER_RIGHT_TYPE_C = 3 << 6
+struct CellSide
+{
+    CellSideType    type;
+    Cell::cord_type pointA[2];
+    Cell::cord_type pointB[2];
 };
 
 #endif //VCTRSKL_CONSTANTS_HPP

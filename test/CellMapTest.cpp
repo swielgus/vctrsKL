@@ -3,7 +3,7 @@
 
 struct CellMapTest : testing::Test
 {
-    using cell_type = Cell::byte;
+    using cell_type = CellSideType;
 
     CellMap* testedCellMap;
 
@@ -17,13 +17,9 @@ struct CellMapTest : testing::Test
     }
 };
 
-CellMapTest::cell_type operator+(const CellSide& a, const CellSide& b)
+::std::ostream& operator<<(::std::ostream& os, const CellSideType& element)
 {
-    return static_cast<CellMapTest::cell_type>(a) + static_cast<CellMapTest::cell_type>(b);
-}
-CellMapTest::cell_type operator+(const CellMapTest::cell_type& a, const CellSide& b)
-{
-    return a + static_cast<CellMapTest::cell_type>(b);
+    return os << +static_cast<Cell::byte>(element);  // whatever needed to print bar to os
 }
 
 TEST_F(CellMapTest, shouldConstruct1CellFrom1x1Image)
@@ -32,9 +28,10 @@ TEST_F(CellMapTest, shouldConstruct1CellFrom1x1Image)
     PixelGraph graphOfTestedImage(testedImage);
     testedCellMap = new CellMap(graphOfTestedImage);
 
-    std::vector< std::vector<cell_type> > expectedResult{ { 255 } };
+    std::vector< std::vector<cell_type> > expectedResult{ { CellSideType::Point, CellSideType::Point },
+                                                          { CellSideType::Point, CellSideType::Point } };
 
-    EXPECT_EQ(expectedResult, testedCellMap->getCellValues());
+    EXPECT_EQ(expectedResult, testedCellMap->getCellTypes());
 }
 
 TEST_F(CellMapTest, shouldConstruct100SquareCellsFromHorizontalLineImage)
@@ -43,13 +40,18 @@ TEST_F(CellMapTest, shouldConstruct100SquareCellsFromHorizontalLineImage)
     PixelGraph graphOfTestedImage(testedImage);
     testedCellMap = new CellMap(graphOfTestedImage);
 
-    std::vector< std::vector<cell_type> > expectedResult{ {} };
-    Cell::byte expectedCellValue = CellSide::UPPER_RIGHT_TYPE_C + CellSide::UPPER_LEFT_TYPE_C +
-                                   CellSide::LOWER_RIGHT_TYPE_C + CellSide::LOWER_LEFT_TYPE_C;
-    for(int i = 1; i <= 100; ++i)
-        expectedResult[0].push_back(expectedCellValue);
+    std::vector< std::vector<cell_type> > expectedResult{ {}, {} };
+    cell_type expectedCellValue = CellSideType::Point;
 
-    EXPECT_EQ(expectedResult, testedCellMap->getCellValues());
+    for(int v = 0; v < 2; ++v)
+    {
+        for(int i = 0; i < 101; ++i)
+        {
+            expectedResult[v].push_back(expectedCellValue);
+        }
+    }
+
+    EXPECT_EQ(expectedResult, testedCellMap->getCellTypes());
 }
 
 TEST_F(CellMapTest, shouldConstruct100SquareCellsFromVerticalLineImage)
@@ -59,12 +61,14 @@ TEST_F(CellMapTest, shouldConstruct100SquareCellsFromVerticalLineImage)
     testedCellMap = new CellMap(graphOfTestedImage);
 
     std::vector< std::vector<cell_type> > expectedResult{ };
-    Cell::byte expectedCellValue = CellSide::UPPER_RIGHT_TYPE_C + CellSide::UPPER_LEFT_TYPE_C +
-                                   CellSide::LOWER_RIGHT_TYPE_C + CellSide::LOWER_LEFT_TYPE_C;
-    for(int i = 1; i <= 100; ++i)
-        expectedResult.push_back({expectedCellValue});
+    std::vector<cell_type> expectedCellRowValues = {CellSideType::Point, CellSideType::Point};
 
-    EXPECT_EQ(expectedResult, testedCellMap->getCellValues());
+    for(int i = 0; i < 101; ++i)
+    {
+        expectedResult.push_back(expectedCellRowValues);
+    }
+
+    EXPECT_EQ(expectedResult, testedCellMap->getCellTypes());
 }
 
 TEST_F(CellMapTest, shouldConstruct200SquareCellsFromHorizontalDoubleLineImage)
@@ -73,16 +77,16 @@ TEST_F(CellMapTest, shouldConstruct200SquareCellsFromHorizontalDoubleLineImage)
     PixelGraph graphOfTestedImage(testedImage);
     testedCellMap = new CellMap(graphOfTestedImage);
 
-    std::vector< std::vector<cell_type> > expectedResult{ {}, {} };
-    Cell::byte expectedCellValue = CellSide::UPPER_RIGHT_TYPE_C + CellSide::UPPER_LEFT_TYPE_C +
-                                   CellSide::LOWER_RIGHT_TYPE_C + CellSide::LOWER_LEFT_TYPE_C;
-    for(int i = 1; i <= 100; ++i)
+    std::vector< std::vector<cell_type> > expectedResult{ {}, {}, {} };
+    cell_type expectedCellValue = CellSideType::Point;
+    for(int i = 0; i < 101; ++i)
     {
         expectedResult[0].push_back(expectedCellValue);
         expectedResult[1].push_back(expectedCellValue);
+        expectedResult[2].push_back(expectedCellValue);
     }
 
-    EXPECT_EQ(expectedResult, testedCellMap->getCellValues());
+    EXPECT_EQ(expectedResult, testedCellMap->getCellTypes());
 }
 
 TEST_F(CellMapTest, shouldConstructManySquaresOnTransitiveColorsExceptOneCorner)
@@ -91,28 +95,16 @@ TEST_F(CellMapTest, shouldConstructManySquaresOnTransitiveColorsExceptOneCorner)
     PixelGraph graphOfTestedImage(testedImage);
     testedCellMap = new CellMap(graphOfTestedImage);
 
-    std::vector< std::vector<cell_type> > expectedResult{{},{},{},{},{}};
-    Cell::byte expectedSquareValue = CellSide::UPPER_RIGHT_TYPE_C + CellSide::UPPER_LEFT_TYPE_C +
-                                     CellSide::LOWER_RIGHT_TYPE_C + CellSide::LOWER_LEFT_TYPE_C;
-    for(int i = 1; i <= 5; ++i)
+    std::vector< std::vector<cell_type> > expectedResult{{},{},{},{},{},{}};
+    cell_type expectedCellValue = CellSideType::Point;
+    for(int i = 0; i < 6; ++i)
     {
-        expectedResult[0].push_back(expectedSquareValue);
-        expectedResult[1].push_back(expectedSquareValue);
-        expectedResult[2].push_back(expectedSquareValue);
-        if(i < 4)
+        for(int j = 0; j < 6; ++j)
         {
-            expectedResult[3].push_back(expectedSquareValue);
-            expectedResult[4].push_back(expectedSquareValue);
+            expectedResult[i].push_back(expectedCellValue);
         }
     }
-    expectedResult[3].push_back(CellSide::UPPER_RIGHT_TYPE_C + CellSide::UPPER_LEFT_TYPE_C +
-                                CellSide::LOWER_RIGHT_TYPE_B + CellSide::LOWER_LEFT_TYPE_C);
-    expectedResult[3].push_back(CellSide::UPPER_RIGHT_TYPE_C + CellSide::UPPER_LEFT_TYPE_C +
-                                CellSide::LOWER_RIGHT_TYPE_C + CellSide::LOWER_LEFT_TYPE_A);
-    expectedResult[4].push_back(CellSide::UPPER_RIGHT_TYPE_A + CellSide::UPPER_LEFT_TYPE_C +
-                                CellSide::LOWER_RIGHT_TYPE_C + CellSide::LOWER_LEFT_TYPE_C);
-    expectedResult[4].push_back(CellSide::UPPER_RIGHT_TYPE_C + CellSide::UPPER_LEFT_TYPE_B +
-                                CellSide::LOWER_RIGHT_TYPE_C + CellSide::LOWER_LEFT_TYPE_C);
+    expectedResult[4][4] = CellSideType::Backslash;
 
-    EXPECT_EQ(expectedResult, testedCellMap->getCellValues());
+    EXPECT_EQ(expectedResult, testedCellMap->getCellTypes());
 }
