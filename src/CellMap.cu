@@ -30,10 +30,11 @@ std::vector< std::vector<CellSideType> > CellMap::getCellTypes() const
     CellSide* cellSideValues = new CellSide[width * height];
     cudaMemcpy(cellSideValues, d_cellData, width * height * sizeof(CellSide), cudaMemcpyDeviceToHost);
 
+    Cell::byte firstThreeBitsMask = 7;
     for(std::size_t x = 0; x < height; ++x)
         for(std::size_t y = 0; y < width; ++y)
         {
-            result[x][y] = (cellSideValues + (y + x * width))->type;
+            result[x][y] = static_cast<CellSideType>(((cellSideValues + (y + x * width))->type) & firstThreeBitsMask);
         }
 
     delete[] cellSideValues;

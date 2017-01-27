@@ -33,14 +33,22 @@ enum class GraphEdge : Graph::byte
 
 enum class CellSideType : Cell::byte
 {
-    Backslash, ForwardSlash, Point
+    Backslash    = 1,
+    ForwardSlash = 2,
+    Point        = 3
 };
 
 struct CellSide
 {
-    CellSideType    type;
+    Cell::byte      type;
     Cell::cord_type pointA[2];
     Cell::cord_type pointB[2];
+};
+
+struct RegionPoint
+{
+    bool usePointBWhenForwardSlash;
+    int idxOfCoordinates;
 };
 
 #endif //VCTRSKL_CONSTANTS_HPP
