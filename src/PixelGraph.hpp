@@ -16,7 +16,8 @@ public:
     void resolveUnnecessaryDiagonals();
     void resolveDisconnectingDiagonals();
     void resolveCrossings();
-    std::vector<std::vector<color_type> > getEdgeValues() const;
+    std::vector<std::vector<edge_type> > getEdgeValues() const;
+    std::vector<edge_type> get1DEdgeValues() const;
     const edge_type* getGPUAddressOfGraphData() const;
     std::size_t getWidth() const;
     std::size_t getHeight() const;

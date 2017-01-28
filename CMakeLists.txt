@@ -10,5 +10,7 @@ set(CUDA_PROPAGATE_HOST_FLAGS ON)
 set(CUDA_SEPARABLE_COMPILATION OFF)
 set(CUDA_VERBOSE_BUILD OFF)
 
+include_directories(${CUDA_INCLUDE_DIRS})
+
 add_subdirectory(src)
 add_subdirectory(test)

@@ -74,6 +74,26 @@ std::vector< std::vector<PixelGraph::edge_type> > PixelGraph::getEdgeValues() co
     return result;
 }
 
+
+std::vector<PixelGraph::edge_type> PixelGraph::get1DEdgeValues() const
+{
+    const std::size_t width = getWidth();
+    const std::size_t height = getHeight();
+
+    std::vector<edge_type> result;
+    result.resize(height * width);
+
+    edge_type* pixelDirection = new edge_type[width * height];
+    cudaMemcpy(pixelDirection, d_pixelConnections, width * height * sizeof(edge_type), cudaMemcpyDeviceToHost);
+
+    for(std::size_t i = 0; i < height * width; ++i)
+        result[i] = *(pixelDirection + i);
+
+    delete[] pixelDirection;
+
+    return result;
+}
+
 void PixelGraph::resolveCrossings()
 {
     const std::size_t width = getWidth();

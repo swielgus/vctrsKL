@@ -1,15 +1,19 @@
+#include <chrono>
+#include <cuda_runtime.h>
 #include "CellMap.hpp"
 #include "CellMapConstructing.hpp"
 
 CellMap::CellMap(const PixelGraph& graph)
-    : sourceGraph{graph}, d_cellData{nullptr}
+    : sourceGraph{graph}, d_cellData{nullptr}, creatorOfRegions{nullptr}
 {
     constructPixelCells();
+    createPointPaths();
 }
 
 CellMap::~CellMap()
 {
     freeDeviceData();
+    delete creatorOfRegions;
 }
 
 void CellMap::freeDeviceData()
@@ -55,4 +59,15 @@ void CellMap::constructPixelCells()
                  (width + dimBlock.y -1)/dimBlock.y);
     CellMapConstructing::createCells<<<dimGrid, dimBlock>>>(d_cellData, d_graphData, width, height);
     cudaDeviceSynchronize();
+}
+
+void CellMap::createPointPaths()
+{
+    const int width = sourceGraph.getWidth();
+    const int height = sourceGraph.getHeight();
+
+    auto start = std::chrono::steady_clock::now();
+    creatorOfRegions = new RegionConstructor{sourceGraph.get1DEdgeValues(), width, height};
+    auto duration = std::chrono::duration_cast< std::chrono::microseconds >(std::chrono::steady_clock::now() - start);
+    std::cout << "\n RegionConstructor time: " << duration.count() << " microseconds \n";
 }

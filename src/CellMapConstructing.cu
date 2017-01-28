@@ -57,6 +57,18 @@ CellMapConstructing::createCells(CellSide* cellData, const Graph::byte* graphDat
             rowB = static_cast<Cell::cord_type>(row) - 0.25f;
             colB = static_cast<Cell::cord_type>(col) - 0.25f;
         }
+        else
+        {
+            if(row == height - 1)
+                rowA = static_cast<Cell::cord_type>(height-1);
+            else if(row > 0)
+                rowA = static_cast<Cell::cord_type>(row) - 0.5f;
+
+            if(col == width - 1)
+                colA = static_cast<Cell::cord_type>(width-1);
+            else if(col > 0)
+                colA = static_cast<Cell::cord_type>(col) - 0.5f;
+        }
 
         cellData[idxOfQuarter].type = static_cast<Cell::byte>(currentQuarterSideType);
         cellData[idxOfQuarter].pointA[0] = rowA;

@@ -2,6 +2,7 @@
 #define VCTRSKL_CELLMAP_HPP
 
 #include "PixelGraph.hpp"
+#include "RegionConstructor.hpp"
 #include "Constants.hpp"
 
 class CellMap
@@ -15,11 +16,13 @@ public:
 
     std::vector< std::vector<CellSideType> > getCellTypes() const;
 private:
-    const PixelGraph& sourceGraph;
-    CellSide* d_cellData;
+    const PixelGraph&  sourceGraph;
+    CellSide*          d_cellData;
+    RegionConstructor* creatorOfRegions;
 
     void freeDeviceData();
     void constructPixelCells();
+    void createPointPaths();
 };
 
 

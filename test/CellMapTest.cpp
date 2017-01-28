@@ -108,3 +108,23 @@ TEST_F(CellMapTest, shouldConstructManySquaresOnTransitiveColorsExceptOneCorner)
 
     EXPECT_EQ(expectedResult, testedCellMap->getCellTypes());
 }
+
+TEST_F(CellMapTest, DISABLED_shouldConstructTwoRegionBoundariesAtLeastForBinaryImage)
+{
+    ImageData testedImage("images/curveHeuTest.png");
+    PixelGraph graphOfTestedImage(testedImage);
+    testedCellMap = new CellMap(graphOfTestedImage);
+
+    /*std::vector< std::vector<cell_type> > expectedResult{{},{},{},{},{},{}};
+    cell_type expectedCellValue = CellSideType::Point;
+    for(int i = 0; i < 6; ++i)
+    {
+        for(int j = 0; j < 6; ++j)
+        {
+            expectedResult[i].push_back(expectedCellValue);
+        }
+    }
+    expectedResult[4][4] = CellSideType::Backslash;
+
+    EXPECT_EQ(expectedResult, testedCellMap->getCellTypes());*/
+}

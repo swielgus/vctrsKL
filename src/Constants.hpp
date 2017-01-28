@@ -47,8 +47,14 @@ struct CellSide
 
 struct RegionPoint
 {
-    bool usePointBWhenForwardSlash;
+    int idxOfCorrespondingGraphNode;
     int idxOfCoordinates;
+
+    bool operator==(const RegionPoint& other)
+    {
+        return (idxOfCorrespondingGraphNode == other.idxOfCorrespondingGraphNode) &&
+               (idxOfCoordinates == other.idxOfCoordinates);
+    }
 };
 
 #endif //VCTRSKL_CONSTANTS_HPP

@@ -15,7 +15,7 @@ find_package_handle_standard_args(
         DEFAULT_MSG
         png++_INCLUDE_DIRS
 )
-include_directories(${CUDA_TOOLKIT_INCLUDE} ${PNG_INCLUDE_DIR} ${png++_INCLUDE_DIRS})
+include_directories(${PNG_INCLUDE_DIR} ${png++_INCLUDE_DIRS})
 
 cuda_add_library(ImageComponentLabeling ImageComponentLabeling.cu)
 cuda_add_library(ImageData ImageData.cu)
@@ -28,5 +28,5 @@ cuda_add_library(PixelGraph PixelGraph.cu)
 target_link_libraries(PixelGraph GraphConstructing GraphCrossResolving ImageData)
 
 cuda_add_library(CellMapConstructing CellMapConstructing.cu)
-cuda_add_library(CellMap CellMap.cu)
+cuda_add_library(CellMap CellMap.cu RegionConstructor.cpp)
 target_link_libraries(CellMap PixelGraph CellMapConstructing)

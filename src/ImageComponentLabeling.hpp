@@ -1,6 +1,8 @@
 #ifndef VCTRSKL_IMAGECOMPONENTLABELING_HPP
 #define VCTRSKL_IMAGECOMPONENTLABELING_HPP
 
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
 #include "Constants.hpp"
 
 namespace ImageComponentLabeling

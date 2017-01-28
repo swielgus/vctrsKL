@@ -1,4 +1,3 @@
-#include <cstdio>
 #include "ImageComponentLabeling.hpp"
 
 __device__ bool
