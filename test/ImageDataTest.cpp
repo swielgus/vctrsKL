@@ -23,7 +23,7 @@ TEST_F(ImageDataTest, defaultlyConstructedClassShouldHaveNoImage)
 
 TEST_F(ImageDataTest, zigzagImageShouldBeLoadedAndVerified)
 {
-    testedData.loadImage("images/chk_2x20.png");
+    testedData.processImage("images/chk_2x20.png");
     unsigned int expectedWidth = 20;
     unsigned int extectedHeight = 2;
 
@@ -52,7 +52,7 @@ TEST_F(ImageDataTest, zigzagImageShouldBeLoadedAndVerified)
 
 TEST_F(ImageDataTest, veryDifferentAndVeryCloseColorsShouldBeRecognized)
 {
-    testedData.loadImage("images/4colors.png");
+    testedData.processImage("images/4colors.png");
     unsigned int expectedWidth = 2;
     unsigned int extectedHeight = 2;
 
@@ -78,18 +78,25 @@ TEST_F(ImageDataTest, veryDifferentAndVeryCloseColorsShouldBeRecognized)
 
 TEST_F(ImageDataTest, twoColorImageShouldBeCorrectlyConvertedToYUV)
 {
-    testedData.loadImage("images/chk_1x2.png");
+    testedData.processImage("images/chk_1x2.png");
 
-    color_type extectedWhiteYUV[3] = {255, 128, 128};
-    color_type extectedBlackYUV[3] = {0, 128, 128};
+    color_type expectedWhiteYUV[3] = {255, 128, 128};
+    color_type expectedBlackYUV[3] = {0, 128, 128};
 
-    EXPECT_EQ(extectedBlackYUV[0], testedData.getPixelY(0, 0));
-    EXPECT_EQ(extectedBlackYUV[1], testedData.getPixelU(0, 0));
-    EXPECT_EQ(extectedBlackYUV[2], testedData.getPixelV(0, 0));
+    EXPECT_EQ(0, testedData.getPixelRed(0, 0));
+    EXPECT_EQ(0, testedData.getPixelGreen(0, 0));
+    EXPECT_EQ(0, testedData.getPixelBlue(0, 0));
+    EXPECT_EQ(255, testedData.getPixelRed(0, 1));
+    EXPECT_EQ(255, testedData.getPixelGreen(0, 1));
+    EXPECT_EQ(255, testedData.getPixelBlue(0, 1));
 
-    EXPECT_EQ(extectedWhiteYUV[0], testedData.getPixelY(0, 1));
-    EXPECT_EQ(extectedWhiteYUV[1], testedData.getPixelU(0, 1));
-    EXPECT_EQ(extectedWhiteYUV[2], testedData.getPixelV(0, 1));
+    EXPECT_EQ(expectedBlackYUV[0], testedData.getPixelY(0, 0));
+    EXPECT_EQ(expectedBlackYUV[1], testedData.getPixelU(0, 0));
+    EXPECT_EQ(expectedBlackYUV[2], testedData.getPixelV(0, 0));
+
+    EXPECT_EQ(expectedWhiteYUV[0], testedData.getPixelY(0, 1));
+    EXPECT_EQ(expectedWhiteYUV[1], testedData.getPixelU(0, 1));
+    EXPECT_EQ(expectedWhiteYUV[2], testedData.getPixelV(0, 1));
 }
 
 TEST_F(ImageDataTest, imageWithSimilarColorsShouldBeCorrectlyConvertedToYUV)

@@ -41,18 +41,17 @@ ImageComponentLabeling::doUnionOfTrees(int* labels, int labelA, int labelB, int*
 }
 
 __device__ void
-ImageComponentLabeling::checkAndCombineTwoPixelRoots(int* labels, int labelA, int labelB, Color::byte* colorY,
-                                                     Color::byte* colorU, Color::byte* colorV, int* didAnyLabelChange,
-                                                     int idxLimit)
+ImageComponentLabeling::checkAndCombineTwoPixelRoots(int* labels, int labelA, int labelB, Color::byte* colorYUV,
+                                                     int* didAnyLabelChange, int idxLimit)
 {
     if(labelA >= 0 && labelA < idxLimit && labelB >= 0 && labelB < idxLimit)
     {
-        Color::byte currentY = colorY[labelA];
-        Color::byte currentU = colorU[labelA];
-        Color::byte currentV = colorV[labelA];
-        Color::byte comparedY = colorY[labelB];
-        Color::byte comparedU = colorU[labelB];
-        Color::byte comparedV = colorV[labelB];
+        Color::byte currentY = colorYUV[3*labelA+0];
+        Color::byte currentU = colorYUV[3*labelA+1];
+        Color::byte currentV = colorYUV[3*labelA+2];
+        Color::byte comparedY = colorYUV[3*labelB+0];
+        Color::byte comparedU = colorYUV[3*labelB+1];
+        Color::byte comparedV = colorYUV[3*labelB+2];
         if(areYUVColorsSimilar(currentY, currentU, currentV, comparedY, comparedU, comparedV))
         {
             doUnionOfTrees(labels, labelA, labelB, didAnyLabelChange);
@@ -61,8 +60,7 @@ ImageComponentLabeling::checkAndCombineTwoPixelRoots(int* labels, int labelA, in
 }
 
 __global__ void
-ImageComponentLabeling::mergeSolutionsOnBlockBorders(Color::byte* colorY, Color::byte* colorU, Color::byte* colorV,
-                                                     int* labels, int width, int height, int tileSide)
+ImageComponentLabeling::mergeSolutionsOnBlockBorders(Color::byte* colorYUV, int* labels, int width, int height, int tileSide)
 {
     //local tileX and Y are stored directly in blockIdx.x and blockIdx.x
     //all threads for each block are stored in the z-dir of each block (threadIdx.z)
@@ -105,22 +103,22 @@ ImageComponentLabeling::mergeSolutionsOnBlockBorders(Color::byte* colorY, Color:
                                                     lastRowOfCurrentTile * width;
 
                         int idxOfComparedPixel = idxOfCurrentTilePixel + width; //below
-                        checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorY, colorU,
-                                                     colorV, wasAnyNodeLabelChanged, idxLimit);
+                        checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorYUV,
+                                                     wasAnyNodeLabelChanged, idxLimit);
 
                         if(distanceOfCurrentTilePixelFromBeginningOfTileLine > 0)
                         //not the element of leftmost tile column
                         {
                             idxOfComparedPixel = idxOfCurrentTilePixel + width - 1;
-                            checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorY,
-                                                         colorU, colorV, wasAnyNodeLabelChanged, idxLimit);
+                            checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorYUV,
+                                                         wasAnyNodeLabelChanged, idxLimit);
                         }
                         if(distanceOfCurrentTilePixelFromBeginningOfTileLine < nextLevelTileSide - 1)
                         //not the element of rightmost tile column
                         {
                             idxOfComparedPixel = idxOfCurrentTilePixel + width + 1;
-                            checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorY,
-                                                         colorU, colorV, wasAnyNodeLabelChanged, idxLimit);
+                            checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorYUV,
+                                                         wasAnyNodeLabelChanged, idxLimit);
                         }
                         lastRowOfCurrentTile += blockDim.z;
                         distanceOfCurrentTilePixelFromBeginningOfTileLine += blockDim.z;
@@ -141,22 +139,22 @@ ImageComponentLabeling::mergeSolutionsOnBlockBorders(Color::byte* colorY, Color:
                                                     currentRowUsedInVerticalBorderComparing * width;
 
                         int idxOfComparedPixel = idxOfCurrentTilePixel + 1; //right
-                        checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorY, colorU,
-                                                     colorV, wasAnyNodeLabelChanged, idxLimit);
+                        checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorYUV,
+                                                     wasAnyNodeLabelChanged, idxLimit);
 
                         if(distanceOfCurrentTilePixelFromBeginningOfTileLine > 0)
                         //not the element of uppermost tile row
                         {
                             idxOfComparedPixel = idxOfCurrentTilePixel - width + 1;
-                            checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorY,
-                                                         colorU, colorV, wasAnyNodeLabelChanged, idxLimit);
+                            checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorYUV,
+                                                         wasAnyNodeLabelChanged, idxLimit);
                         }
                         if(distanceOfCurrentTilePixelFromBeginningOfTileLine < nextLevelTileSide - 1)
                         //not the element of lowermost tile row
                         {
                             idxOfComparedPixel = idxOfCurrentTilePixel + width + 1;
-                            checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorY,
-                                                         colorU, colorV, wasAnyNodeLabelChanged, idxLimit);
+                            checkAndCombineTwoPixelRoots(labels, idxOfCurrentTilePixel, idxOfComparedPixel, colorYUV,
+                                                         wasAnyNodeLabelChanged, idxLimit);
                         }
                         lastColOfCurrentTile += blockDim.z;
                         distanceOfCurrentTilePixelFromBeginningOfTileLine += blockDim.z;
@@ -175,8 +173,7 @@ ImageComponentLabeling::mergeSolutionsOnBlockBorders(Color::byte* colorY, Color:
 }
 
 __global__ void
-ImageComponentLabeling::createLocalComponentLabels(Color::byte* colorY, Color::byte* colorU, Color::byte* colorV,
-                                                   int* output, int width, int height)
+ImageComponentLabeling::createLocalComponentLabels(Color::byte* colorYUV, int* output, int width, int height)
 {
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     int col = blockIdx.y * blockDim.y + threadIdx.y;
@@ -191,19 +188,17 @@ ImageComponentLabeling::createLocalComponentLabels(Color::byte* colorY, Color::b
         extern __shared__ int sMem[];
         int numberOfPixelsPerBlock = blockDim.x * blockDim.y;
         int* sharedLabels = sMem;
-        Color::byte* sharedYData = (Color::byte*)&sMem[numberOfPixelsPerBlock];
-        Color::byte* sharedUData = &sharedYData[numberOfPixelsPerBlock];
-        Color::byte* sharedVData = &sharedUData[numberOfPixelsPerBlock];
+        Color::byte* sharedYUVData = (Color::byte*)&sMem[numberOfPixelsPerBlock];
 
         __shared__ int didAnyLabelChange[1];
 
-        Color::byte currentY = colorY[idx];
-        Color::byte currentU = colorU[idx];
-        Color::byte currentV = colorV[idx];
+        Color::byte currentY = colorYUV[3*idx+0];
+        Color::byte currentU = colorYUV[3*idx+1];
+        Color::byte currentV = colorYUV[3*idx+2];
 
-        sharedYData[idxInSharedBlock] = currentY;
-        sharedUData[idxInSharedBlock] = currentU;
-        sharedVData[idxInSharedBlock] = currentV;
+        sharedYUVData[3*idxInSharedBlock+0] = currentY;
+        sharedYUVData[3*idxInSharedBlock+1] = currentU;
+        sharedYUVData[3*idxInSharedBlock+2] = currentV;
         __syncthreads();
 
         while(true)
@@ -231,9 +226,9 @@ ImageComponentLabeling::createLocalComponentLabels(Color::byte* colorY, Color::b
                 {
                     int currentIdxInSharedBlock = currentColInSharedBlock + currentRowInSharedBlock * blockSide;
                     if( areYUVColorsSimilar(currentY, currentU, currentV,
-                                            sharedYData[currentIdxInSharedBlock],
-                                            sharedUData[currentIdxInSharedBlock],
-                                            sharedVData[currentIdxInSharedBlock]) )
+                                            sharedYUVData[3*currentIdxInSharedBlock+0],
+                                            sharedYUVData[3*currentIdxInSharedBlock+1],
+                                            sharedYUVData[3*currentIdxInSharedBlock+2]) )
                         newLabel = min(newLabel, sharedLabels[currentIdxInSharedBlock]);
                 }
             }

@@ -1,7 +1,7 @@
 #ifndef VCTRSKL_IMAGEDATA_HPP
 #define VCTRSKL_IMAGEDATA_HPP
 
-#include <png++/png.hpp>
+#include <vector>
 #include "Constants.hpp"
 
 class ImageData
@@ -13,36 +13,35 @@ public:
     ImageData(std::string filename);
     ~ImageData();
 
-    std::size_t getWidth() const;
-    std::size_t getHeight() const;
+    void processImage(std::string filename);
 
-    void loadImage(std::string filename);
-    const color_type& getPixelRed(std::size_t x, std::size_t y) const;
-    const color_type& getPixelGreen(std::size_t x, std::size_t y) const;
-    const color_type& getPixelBlue(std::size_t x, std::size_t y) const;
+    unsigned int getWidth() const;
+    unsigned int getHeight() const;
 
-    color_type getPixelY(std::size_t x, std::size_t y) const;
-    color_type getPixelU(std::size_t x, std::size_t y) const;
-    color_type getPixelV(std::size_t x, std::size_t y) const;
+    const color_type& getPixelRed(int row, int col) const;
+    const color_type& getPixelGreen(int row, int col) const;
+    const color_type& getPixelBlue(int row, int col) const;
 
-    const color_type* getGPUAddressOfYColorData() const;
-    const color_type* getGPUAddressOfUColorData() const;
-    const color_type* getGPUAddressOfVColorData() const;
+    color_type getPixelY(unsigned int row, unsigned int col) const;
+    color_type getPixelU(unsigned int row, unsigned int col) const;
+    color_type getPixelV(unsigned int row, unsigned int col) const;
+
+    const color_type* getGPUAddressOfYUVColorData() const;
     const int* getGPUAddressOfLabelData() const;
 
     std::vector< std::vector<int> > getLabelValues() const;
 private:
-    png::image<png::rgb_pixel> internalImage;
-    color_type* d_colorYData;
-    color_type* d_colorUData;
-    color_type* d_colorVData;
+    std::vector<color_type> internalImage;
+    unsigned int imageWidth;
+    unsigned int imageHeight;
+    color_type* d_colorYUVData;
     int* d_componentLabels;
 
+    void loadImage(std::string filename);
     void allocatePixelDataOnDevice();
     void createLabelsForSimilarPixels();
 
     void freeDeviceData();
-    const png::rgb_pixel& getPixel(std::size_t x, std::size_t y) const;
 };
 
 #endif //VCTRSKL_IMAGEDATA_HPP

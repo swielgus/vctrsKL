@@ -1,122 +1,120 @@
-
+#include <iostream>
+#include <lodepng.h>
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
 #include "ImageData.hpp"
 #include "ImageComponentLabeling.hpp"
 
 __global__ void
-convertToYUV(ImageData::color_type* inputR, ImageData::color_type* inputG, ImageData::color_type* inputB,
-             ImageData::color_type* outputY, ImageData::color_type* outputU, ImageData::color_type* outputV,
-             const std::size_t width, const std::size_t height)
+convertToYUV(ImageData::color_type* inputRGB, ImageData::color_type* outputYUV,
+             const unsigned int width, const unsigned int height)
 {
-    int i = threadIdx.x + (blockIdx.x * blockDim.x);
-    int j = threadIdx.y + (blockIdx.y * blockDim.y);
-    if(i < height && j < width)
+    int row = threadIdx.x + (blockIdx.x * blockDim.x);
+    int col = threadIdx.y + (blockIdx.y * blockDim.y);
+    if(row < height && col < width)
     {
-        std::size_t idx = j + i * width;
+        unsigned int idx = 3*col + 3*row * width;
 
-        ImageData::color_type red = inputR[idx];
-        ImageData::color_type green = inputG[idx];
-        ImageData::color_type blue = inputB[idx];
+        ImageData::color_type red = inputRGB[idx+0];
+        ImageData::color_type green = inputRGB[idx+1];
+        ImageData::color_type blue = inputRGB[idx+2];
 
-        outputY[idx] = static_cast<ImageData::color_type>(0.299 * red + 0.587 * green + 0.114 * blue);
-        outputU[idx] = static_cast<ImageData::color_type>((-0.169 * red - 0.331 * green + 0.5 * blue) + 128);
-        outputV[idx] = static_cast<ImageData::color_type>((0.5 * red - 0.419 * green - 0.081 * blue) + 128);
+        outputYUV[idx+0] = static_cast<ImageData::color_type>(0.299 * red + 0.587 * green + 0.114 * blue);
+        outputYUV[idx+1] = static_cast<ImageData::color_type>((-0.169 * red - 0.331 * green + 0.5 * blue) + 128);
+        outputYUV[idx+2] = static_cast<ImageData::color_type>((0.5 * red - 0.419 * green - 0.081 * blue) + 128);
     }
 }
 
-const ImageData::color_type* ImageData::getGPUAddressOfYColorData() const
+const ImageData::color_type* ImageData::getGPUAddressOfYUVColorData() const
 {
-    return d_colorYData;
-}
-const ImageData::color_type* ImageData::getGPUAddressOfUColorData() const
-{
-    return d_colorUData;
-}
-const ImageData::color_type* ImageData::getGPUAddressOfVColorData() const
-{
-    return d_colorVData;
+    return d_colorYUVData;
 }
 const int* ImageData::getGPUAddressOfLabelData() const
 {
     return d_componentLabels;
 }
 
-std::size_t ImageData::getWidth() const
+unsigned int ImageData::getWidth() const
 {
-    return internalImage.get_width();
+    return imageWidth;
 }
 
-std::size_t ImageData::getHeight() const
+unsigned int ImageData::getHeight() const
 {
-    return internalImage.get_height();
+    return imageHeight;
 }
 
 void ImageData::loadImage(std::string filename)
 {
-    internalImage.read(filename);
-    allocatePixelDataOnDevice();
-    createLabelsForSimilarPixels();
+    unsigned error = lodepng::decode(internalImage, imageWidth, imageHeight, filename, LodePNGColorType::LCT_RGB);
+
+    if(error)
+        std::cout << "decoder error " << error << ": " << lodepng_error_text(error);
 }
 
-const png::rgb_pixel& ImageData::getPixel(std::size_t x, std::size_t y) const
+const ImageData::color_type& ImageData::getPixelRed(int row, int col) const
 {
-    return internalImage.get_row(x).at(y);
+    int idxOfPixelValues = (3 * col) + (3 * row * getWidth());
+    return internalImage[idxOfPixelValues + 0];
 }
 
-const ImageData::color_type& ImageData::getPixelRed(std::size_t x, std::size_t y) const
+const ImageData::color_type& ImageData::getPixelGreen(int row, int col) const
 {
-    return getPixel(x, y).red;
+    int idxOfPixelValues = (3 * col) + (3 * row * getWidth());
+    return internalImage[idxOfPixelValues + 1];
 }
 
-const ImageData::color_type& ImageData::getPixelGreen(std::size_t x, std::size_t y) const
+const ImageData::color_type& ImageData::getPixelBlue(int row, int col) const
 {
-    return getPixel(x, y).green;
+    int idxOfPixelValues = (3 * col) + (3 * row * getWidth());
+    return internalImage[idxOfPixelValues + 2];
 }
 
-const ImageData::color_type& ImageData::getPixelBlue(std::size_t x, std::size_t y) const
-{
-    return getPixel(x, y).blue;
-}
-
-ImageData::color_type ImageData::getPixelY(std::size_t x, std::size_t y) const
+ImageData::color_type ImageData::getPixelY(unsigned int row, unsigned int col) const
 {
     color_type* pixelYValue = new color_type;
-    cudaMemcpy( pixelYValue, d_colorYData+(y+x*this->getWidth()), sizeof(color_type), cudaMemcpyDeviceToHost);
+    cudaMemcpy( pixelYValue, d_colorYUVData+(3*col+3*row*getWidth() + 0), sizeof(color_type), cudaMemcpyDeviceToHost);
 
     color_type result = *pixelYValue;
     delete pixelYValue;
     return result;
 }
 
-ImageData::color_type ImageData::getPixelU(std::size_t x, std::size_t y) const
+ImageData::color_type ImageData::getPixelU(unsigned int row, unsigned int col) const
 {
     color_type* pixelUValue = new color_type;
-    cudaMemcpy( pixelUValue, d_colorUData+(y+x*this->getWidth()), sizeof(color_type), cudaMemcpyDeviceToHost);
+    cudaMemcpy( pixelUValue, d_colorYUVData+(3*col+3*row*getWidth() + 1), sizeof(color_type), cudaMemcpyDeviceToHost);
 
     color_type result = *pixelUValue;
     delete pixelUValue;
     return result;
 }
 
-ImageData::color_type ImageData::getPixelV(std::size_t x, std::size_t y) const
+ImageData::color_type ImageData::getPixelV(unsigned int row, unsigned int col) const
 {
     color_type* pixelVValue = new color_type;
-    cudaMemcpy( pixelVValue, d_colorVData+(y+x*this->getWidth()), sizeof(color_type), cudaMemcpyDeviceToHost);
+    cudaMemcpy( pixelVValue, d_colorYUVData+(3*col+3*row*getWidth() + 2), sizeof(color_type), cudaMemcpyDeviceToHost);
 
     color_type result = *pixelVValue;
     delete pixelVValue;
     return result;
 }
 
-ImageData::ImageData(std::string filename)
-        : internalImage{}, d_colorYData{nullptr}, d_colorUData{nullptr}, d_colorVData{nullptr},
-          d_componentLabels{nullptr}
+void ImageData::processImage(std::string filename)
 {
     this->loadImage(filename);
+    allocatePixelDataOnDevice();
+    createLabelsForSimilarPixels();
+}
+
+ImageData::ImageData(std::string filename)
+        : internalImage{}, imageWidth{0}, imageHeight{0}, d_colorYUVData{nullptr}, d_componentLabels{nullptr}
+{
+    processImage(filename);
 }
 
 ImageData::ImageData()
-        : internalImage{}, d_colorYData{nullptr}, d_colorUData{nullptr}, d_colorVData{nullptr},
-          d_componentLabels{nullptr}
+        : internalImage{}, imageWidth{0}, imageHeight{0}, d_colorYUVData{nullptr}, d_componentLabels{nullptr}
 
 {}
 
@@ -128,9 +126,7 @@ ImageData::~ImageData()
 
 void ImageData::freeDeviceData()
 {
-    cudaFree(d_colorYData);
-    cudaFree(d_colorUData);
-    cudaFree(d_colorVData);
+    cudaFree(d_colorYUVData);
     cudaFree(d_componentLabels);
 }
 
@@ -169,50 +165,27 @@ void ImageData::allocatePixelDataOnDevice()
     std::size_t height = this->getHeight();
     std::size_t width = this->getWidth();
 
-    color_type* d_inputRData = nullptr;
-    color_type* d_inputGData = nullptr;
-    color_type* d_inputBData = nullptr;
+    color_type* d_inputRGBData = nullptr;
 
-    cudaMalloc( &d_inputRData, width * height * sizeof(color_type));
-    cudaMalloc( &d_inputGData, width * height * sizeof(color_type));
-    cudaMalloc( &d_inputBData, width * height * sizeof(color_type));
+    cudaMalloc( &d_inputRGBData, 3 * width * height * sizeof(color_type));
+    cudaMemcpy( d_inputRGBData, internalImage.data(), 3 * width * height * sizeof(color_type), cudaMemcpyHostToDevice );
 
-    int k = 0;
-    for(std::size_t i = 0; i < height; ++i)
-    for(std::size_t j = 0; j < width; ++j)
-    {
-        const color_type& currentPixelR = this->getPixelRed(i,j);
-        const color_type& currentPixelG = this->getPixelGreen(i,j);
-        const color_type& currentPixelB = this->getPixelBlue(i,j);
-        cudaMemcpy( d_inputRData+k, &currentPixelR, sizeof(color_type), cudaMemcpyHostToDevice );
-        cudaMemcpy( d_inputGData+k, &currentPixelG, sizeof(color_type), cudaMemcpyHostToDevice );
-        cudaMemcpy( d_inputBData+k, &currentPixelB, sizeof(color_type), cudaMemcpyHostToDevice );
-        ++k;
-    }
-
-    cudaMalloc( &d_colorYData, width * height * sizeof(color_type));
-    cudaMalloc( &d_colorUData, width * height * sizeof(color_type));
-    cudaMalloc( &d_colorVData, width * height * sizeof(color_type));
-
-
+    cudaMalloc( &d_colorYUVData, 3 * width * height * sizeof(color_type));
 
     dim3 dimBlock(16, 16);
     dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x,
                  (width + dimBlock.y -1)/dimBlock.y);
 
-    convertToYUV<<<dimGrid, dimBlock>>>(d_inputRData, d_inputGData, d_inputBData,
-                                        d_colorYData, d_colorUData, d_colorVData, width, height);
+    convertToYUV<<<dimGrid, dimBlock>>>(d_inputRGBData, d_colorYUVData, width, height);
     cudaDeviceSynchronize();
 
-    cudaFree(d_inputRData);
-    cudaFree(d_inputGData);
-    cudaFree(d_inputBData);
+    cudaFree(d_inputRGBData);
 }
 
 void ImageData::createLabelsForSimilarPixels()
 {
-    std::size_t height = this->getHeight();
-    std::size_t width = this->getWidth();
+    unsigned int height = this->getHeight();
+    unsigned int width = this->getWidth();
     cudaMalloc( &d_componentLabels, width * height * sizeof(int));
 
     int blockSide = 16;
@@ -223,7 +196,7 @@ void ImageData::createLabelsForSimilarPixels()
 
     //solve components in local squares
     ImageComponentLabeling::createLocalComponentLabels <<<dimGrid, dimBlock, (numberOfPixelsPerBlock * sizeof(int))+(3 * numberOfPixelsPerBlock * sizeof(Color::byte))>>>(
-        d_colorYData, d_colorUData, d_colorVData, d_componentLabels, width, height);
+        d_colorYUVData, d_componentLabels, width, height);
     cudaDeviceSynchronize();
 
     //merge small results into bigger groups
@@ -247,7 +220,7 @@ void ImageData::createLabelsForSimilarPixels()
         dim3 grid((height + (numberOfTileRows * blockSide) - 1) / (numberOfTileRows * blockSide),
                   (width + (numberOfTileCols * blockSide) - 1) / (numberOfTileCols * blockSide));
         ImageComponentLabeling::mergeSolutionsOnBlockBorders<<<grid, block>>>(
-                d_colorYData, d_colorUData, d_colorVData, d_componentLabels, width, height, blockSide);
+                d_colorYUVData, d_componentLabels, width, height, blockSide);
 
         if(numberOfTileCols > numberOfTileRows)
             blockSide = numberOfTileCols * blockSide;
