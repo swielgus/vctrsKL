@@ -13,8 +13,6 @@ public:
     PixelGraph(const ImageData& image);
     ~PixelGraph();
 
-    void resolveUnnecessaryDiagonals();
-    void resolveDisconnectingDiagonals();
     void resolveCrossings();
     std::vector<std::vector<edge_type> > getEdgeValues() const;
     std::vector<edge_type> get1DEdgeValues() const;

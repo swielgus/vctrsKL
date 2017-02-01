@@ -30,3 +30,5 @@ target_link_libraries(PixelGraph GraphConstructing GraphCrossResolving ImageData
 cuda_add_library(CellMapConstructing CellMapConstructing.cu)
 cuda_add_library(CellMap CellMap.cu RegionConstructor.cpp)
 target_link_libraries(CellMap PixelGraph CellMapConstructing)
+
+add_subdirectory(utils)

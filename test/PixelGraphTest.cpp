@@ -119,6 +119,17 @@ TEST_F(PixelGraphTest, resolvingCrossingsOnTwoPointGraphWithNoEdgesShouldNotChan
     EXPECT_EQ(expectedResult, testedGraph->getEdgeValues());
 }
 
+TEST_F(PixelGraphTest, resolvingCrossingsOnAGraphWithFourPointsShieldIsolateAllPixels)
+{
+    ImageData testedImage("images/chk_2x2.png");
+    testedGraph = new PixelGraph(testedImage);
+    testedGraph->resolveCrossings();
+
+    std::vector<std::vector<color_type>> expectedResult{ {0, 0}, {0, 0} };
+
+    EXPECT_EQ(expectedResult, testedGraph->getEdgeValues());
+}
+
 TEST_F(PixelGraphTest, resolvingCrossingsOnAHorizontalLineGraphShouldNotChangeAnything)
 {
     ImageData testedImage("images/1x100.png");
