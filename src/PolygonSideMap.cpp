@@ -6,6 +6,7 @@ PolygonSideMap::PolygonSideMap(const PixelGraph& graph)
 {
     constructInternalPolygonSides();
     generateRegionBoundaries();
+    allocatePathPointsOfBoundariesOnDevice();
 }
 
 PolygonSideMap::~PolygonSideMap()
@@ -61,4 +62,15 @@ void PolygonSideMap::generateRegionBoundaries()
 const ClipperLib::Paths& PolygonSideMap::getGeneratedRegionBoundaries() const
 {
     return regionConstructor->getBoundaries();
+}
+
+void PolygonSideMap::allocatePathPointsOfBoundariesOnDevice()
+{
+    auto pathPoints = regionConstructor->createPathPoints();
+    //TODO send this vector of vectors to device
+}
+
+std::vector<std::vector<PathPoint> > PolygonSideMap::getPathPointBoundaries() const
+{
+    return regionConstructor->createPathPoints();
 }

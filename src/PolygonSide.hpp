@@ -24,5 +24,22 @@ struct PolygonSide
                 const point_type& bRow = 0.0, const point_type& bCol = 0.0);*/
 };
 
+struct PathPoint
+{
+    bool useBPoint;
+    int  rowOfCoordinates;
+    int  colOfCoordinates;
+
+    friend inline bool operator== (const PathPoint& a, const PathPoint& b)
+    {
+        return a.useBPoint == b.useBPoint &&
+               a.rowOfCoordinates == b.rowOfCoordinates &&
+               a.colOfCoordinates == b.colOfCoordinates;
+    }
+    friend inline bool operator!= (const PathPoint& a, const PathPoint& b)
+    {
+        return !(a == b);
+    }
+};
 
 #endif //VCTRSKL_POLYGONSIDE_HPP

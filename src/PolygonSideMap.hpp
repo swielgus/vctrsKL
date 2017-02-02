@@ -16,6 +16,7 @@ public:
     std::vector<PolygonSide::Type> getInternalSideTypes();
     const std::vector<PolygonSide>& getInternalSides() const;
     const ClipperLib::Paths& getGeneratedRegionBoundaries() const;
+    std::vector< std::vector<PathPoint> > getPathPointBoundaries() const;
 private:
     const PixelGraph&              sourceGraph;
     std::vector<PolygonSide>       polygonSides;
@@ -25,6 +26,7 @@ private:
     void freeDeviceData();
     void constructInternalPolygonSides();
     void generateRegionBoundaries();
+    void allocatePathPointsOfBoundariesOnDevice();
 };
 
 

@@ -404,3 +404,46 @@ const ClipperLib::Paths& RegionConstructor::getBoundaries() const
 {
     return generatedBoundaries;
 }
+
+std::vector<std::vector<PathPoint> > RegionConstructor::createPathPoints()
+{
+    std::vector< std::vector<PathPoint> > result;
+    result.resize(generatedBoundaries.size());
+
+    for(int i = 0; i < generatedBoundaries.size(); ++i)
+    {
+        const auto& currentPathSource = generatedBoundaries.at(i);
+        auto& currentPath = result.at(i);
+        for(const auto& pathElement : currentPathSource)
+        {
+            PathPoint currentPoint{false, pathElement.X / 100, pathElement.Y / 100};
+            unsigned int rowRemainder = pathElement.X % 100;
+            unsigned int colRemainder = pathElement.Y % 100;
+            unsigned int rowQuotient = (pathElement.X - rowRemainder) / 100;
+            unsigned int colQuotient = (pathElement.Y - colRemainder) / 100;
+
+            if(rowRemainder == 25)
+            {
+                currentPoint.useBPoint = true;
+                currentPoint.rowOfCoordinates = rowQuotient;
+            }
+            else if(rowRemainder == 75)
+            {
+                currentPoint.rowOfCoordinates = rowQuotient + 1;
+            }
+
+            if(colRemainder == 25)
+            {
+                currentPoint.colOfCoordinates = colQuotient;
+            }
+            else if(colRemainder == 75)
+            {
+                currentPoint.colOfCoordinates = colQuotient + 1;
+            }
+
+            currentPath.push_back(std::move(currentPoint));
+        }
+    }
+
+    return result;
+}

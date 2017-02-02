@@ -18,6 +18,7 @@ public:
     ~RegionConstructor();
 
     const ClipperLib::Paths& getBoundaries() const;
+    std::vector< std::vector<PathPoint> > createPathPoints();
 private:
     const std::vector<PolygonSide>&          polygonSideData;
     const std::vector<PixelGraph::edge_type> graphData;
@@ -44,9 +45,7 @@ private:
     void addLowerRightCornerOfPolygonToPath(const unsigned int& row, const unsigned int& col, ClipperLib::Path& polygon);
     void addPolygonToPath(const unsigned int& row, const unsigned int& col, ClipperLib::Paths& polygonChain);
     GraphEdge getInvertedDirection(const GraphEdge& direction) const;
-
     ClipperLib::Paths createChainOfPolygonsForRoot(const unsigned int& row, const unsigned int& col);
-
 };
 
 

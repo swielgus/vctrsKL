@@ -127,3 +127,37 @@ TEST_F(PolygonSideMapTest, shouldConstructTwoRegionBoundariesForBinaryTwoCompone
 
     EXPECT_EQ(expectedResult, testedPolygonMap->getGeneratedRegionBoundaries());
 }
+
+TEST_F(PolygonSideMapTest, shouldTranslateTwoRegionBoundariesForBinaryTwoComponentImage)
+{
+    ImageData testedImage("images/curveHeuTest.png");
+    PixelGraph graphOfTestedImage(testedImage);
+    graphOfTestedImage.resolveCrossings();
+    testedPolygonMap = new PolygonSideMap(graphOfTestedImage);
+
+    std::vector< std::vector<PathPoint> > expectedResult{
+            { {false,7,1}, {false,7,2}, {false,7,3}, {false,7,4}, {false,7,5}, {false,7,6},
+              {false,6,6}, {false,5,6}, {false,4,6}, {false,3,6}, {false,2,6}, {false,1,6},
+              {false,0,6}, {false,0,5}, {false,0,4}, {false,0,3}, {false,0,2}, {false,0,1}, {false,0,0}, {false,1,0},
+              {false,2,0}, {false,3,0}, {false,4,0}, {false,5,0}, {false,6,0}, {false,7,0} },
+            { {false,2,3}, {true,2,4}, {false,3,4}, {false,4,4}, {false,5,4}, {false,6,4},
+              {false,6,5}, {false,5,5}, {false,4,5}, {false,3,5}, {true,2,5}, {false,2,4},
+              {true,1,4}, {false,1,3}, {true,1,2}, {false,2,2}, {true,2,1}, {false,3,1},
+              {false,4,1}, {false,4,2}, {false,3,2}, {true,2,2} }
+    };
+
+    auto actualResult = testedPolygonMap->getPathPointBoundaries();
+
+    for(int idxOfPath = 0; idxOfPath < actualResult.size(); ++idxOfPath)
+    {
+        const auto& currentActualPath = actualResult.at(idxOfPath);
+        const auto& currentExpectedPath = expectedResult.at(idxOfPath);
+        for(int idxOfElement = 0; idxOfElement < currentActualPath.size(); ++idxOfElement)
+        {
+            //std::cout << "\n" << idxOfPath << ":" << idxOfElement << "\n";
+            EXPECT_EQ(currentExpectedPath.at(idxOfElement).useBPoint, currentActualPath.at(idxOfElement).useBPoint);
+            EXPECT_EQ(currentExpectedPath.at(idxOfElement).rowOfCoordinates, currentActualPath.at(idxOfElement).rowOfCoordinates);
+            EXPECT_EQ(currentExpectedPath.at(idxOfElement).colOfCoordinates, currentActualPath.at(idxOfElement).colOfCoordinates);
+        }
+    }
+}
