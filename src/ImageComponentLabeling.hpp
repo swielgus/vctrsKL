@@ -17,6 +17,9 @@ namespace ImageComponentLabeling
     __global__ void mergeSolutionsOnBlockBorders(Color::byte* colorYUV, int* labels, int width, int height,
                                                  int tileSide);
     __global__ void flattenAllEquivalenceTrees(int* labels, int width, int height);
+
+    void setComponentLabels(Color::byte* d_colorYUVData, int* d_componentLabels, unsigned int width,
+                            unsigned int height);
 }
 
 #endif //VCTRSKL_IMAGECOMPONENTLABELING_HPP

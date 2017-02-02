@@ -2,8 +2,9 @@ add_subdirectory(external-lodepng)
 include_directories(external-lodepng)
 
 cuda_add_library(ImageComponentLabeling ImageComponentLabeling.cu)
+cuda_add_library(ImageComponentIdentifier ImageComponentIdentifier.cpp)
 cuda_add_library(ImageData ImageData.cu)
-target_link_libraries(ImageData lodepng ImageComponentLabeling)
+target_link_libraries(ImageData lodepng ImageComponentIdentifier ImageComponentLabeling)
 
 cuda_add_library(GraphConstructing GraphConstructing.cu)
 cuda_add_library(GraphCrossResolving GraphCrossResolving.cu)

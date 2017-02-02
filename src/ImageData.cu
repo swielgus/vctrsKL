@@ -3,27 +3,8 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include "ImageData.hpp"
+#include "ImageComponentIdentifier.hpp"
 #include "ImageComponentLabeling.hpp"
-
-__global__ void
-convertToYUV(ImageData::color_type* inputRGB, ImageData::color_type* outputYUV,
-             const unsigned int width, const unsigned int height)
-{
-    int row = threadIdx.x + (blockIdx.x * blockDim.x);
-    int col = threadIdx.y + (blockIdx.y * blockDim.y);
-    if(row < height && col < width)
-    {
-        unsigned int idx = 3*col + 3*row * width;
-
-        ImageData::color_type red = inputRGB[idx+0];
-        ImageData::color_type green = inputRGB[idx+1];
-        ImageData::color_type blue = inputRGB[idx+2];
-
-        outputYUV[idx+0] = static_cast<ImageData::color_type>(0.299 * red + 0.587 * green + 0.114 * blue);
-        outputYUV[idx+1] = static_cast<ImageData::color_type>((-0.169 * red - 0.331 * green + 0.5 * blue) + 128);
-        outputYUV[idx+2] = static_cast<ImageData::color_type>((0.5 * red - 0.419 * green - 0.081 * blue) + 128);
-    }
-}
 
 const ImageData::color_type* ImageData::getGPUAddressOfYUVColorData() const
 {
@@ -46,75 +27,65 @@ unsigned int ImageData::getHeight() const
 
 void ImageData::loadImage(std::string filename)
 {
-    unsigned error = lodepng::decode(internalImage, imageWidth, imageHeight, filename, LodePNGColorType::LCT_RGB);
+    unsigned error = lodepng::decode(colorsRGB, imageWidth, imageHeight, filename, LodePNGColorType::LCT_RGB);
 
     if(error)
         std::cout << "decoder error " << error << ": " << lodepng_error_text(error);
 }
 
-const ImageData::color_type& ImageData::getPixelRed(int row, int col) const
+const ImageData::color_type& ImageData::getColorData(const std::vector<ImageData::color_type>& colors,
+                                                     unsigned int row, unsigned int col, int colorOffset) const
 {
-    int idxOfPixelValues = (3 * col) + (3 * row * getWidth());
-    return internalImage[idxOfPixelValues + 0];
+    int idxOfColorValue = (3 * col) + (3 * row * getWidth()) + colorOffset;
+    return colors[idxOfColorValue];
 }
 
-const ImageData::color_type& ImageData::getPixelGreen(int row, int col) const
+const ImageData::color_type& ImageData::getPixelRed(unsigned int row, unsigned int col) const
 {
-    int idxOfPixelValues = (3 * col) + (3 * row * getWidth());
-    return internalImage[idxOfPixelValues + 1];
+    return getColorData(colorsRGB, row, col, 0);
 }
 
-const ImageData::color_type& ImageData::getPixelBlue(int row, int col) const
+const ImageData::color_type& ImageData::getPixelGreen(unsigned int row, unsigned int col) const
 {
-    int idxOfPixelValues = (3 * col) + (3 * row * getWidth());
-    return internalImage[idxOfPixelValues + 2];
+    return getColorData(colorsRGB, row, col, 1);
 }
 
-ImageData::color_type ImageData::getPixelY(unsigned int row, unsigned int col) const
+const ImageData::color_type& ImageData::getPixelBlue(unsigned int row, unsigned int col) const
 {
-    color_type* pixelYValue = new color_type;
-    cudaMemcpy( pixelYValue, d_colorYUVData+(3*col+3*row*getWidth() + 0), sizeof(color_type), cudaMemcpyDeviceToHost);
-
-    color_type result = *pixelYValue;
-    delete pixelYValue;
-    return result;
+    return getColorData(colorsRGB, row, col, 2);
 }
 
-ImageData::color_type ImageData::getPixelU(unsigned int row, unsigned int col) const
+const ImageData::color_type& ImageData::getPixelY(unsigned int row, unsigned int col) const
 {
-    color_type* pixelUValue = new color_type;
-    cudaMemcpy( pixelUValue, d_colorYUVData+(3*col+3*row*getWidth() + 1), sizeof(color_type), cudaMemcpyDeviceToHost);
-
-    color_type result = *pixelUValue;
-    delete pixelUValue;
-    return result;
+    return getColorData(colorsYUV, row, col, 0);
 }
 
-ImageData::color_type ImageData::getPixelV(unsigned int row, unsigned int col) const
+const ImageData::color_type& ImageData::getPixelU(unsigned int row, unsigned int col) const
 {
-    color_type* pixelVValue = new color_type;
-    cudaMemcpy( pixelVValue, d_colorYUVData+(3*col+3*row*getWidth() + 2), sizeof(color_type), cudaMemcpyDeviceToHost);
+    return getColorData(colorsYUV, row, col, 1);
+}
 
-    color_type result = *pixelVValue;
-    delete pixelVValue;
-    return result;
+const ImageData::color_type& ImageData::getPixelV(unsigned int row, unsigned int col) const
+{
+    return getColorData(colorsYUV, row, col, 2);
 }
 
 void ImageData::processImage(std::string filename)
 {
     this->loadImage(filename);
-    allocatePixelDataOnDevice();
+    convertToYUVLocally();
+    allocateYUVPixelDataOnDevice();
     createLabelsForSimilarPixels();
 }
 
 ImageData::ImageData(std::string filename)
-        : internalImage{}, imageWidth{0}, imageHeight{0}, d_colorYUVData{nullptr}, d_componentLabels{nullptr}
+        : colorsRGB{}, imageWidth{0}, imageHeight{0}, d_colorYUVData{nullptr}, d_componentLabels{nullptr}, colorsYUV{}
 {
     processImage(filename);
 }
 
 ImageData::ImageData()
-        : internalImage{}, imageWidth{0}, imageHeight{0}, d_colorYUVData{nullptr}, d_componentLabels{nullptr}
+        : colorsRGB{}, imageWidth{0}, imageHeight{0}, d_colorYUVData{nullptr}, d_componentLabels{nullptr}, colorsYUV{}
 
 {}
 
@@ -154,32 +125,15 @@ std::vector< std::vector<int> > ImageData::getLabelValues() const
     return result;
 }
 
-void ImageData::allocatePixelDataOnDevice()
+void ImageData::allocateYUVPixelDataOnDevice()
 {
-    //cudaEvent_t start, stop;
-    //cudaEventCreate(&start);
-    //cudaEventCreate(&stop);
-
     freeDeviceData();
     
     std::size_t height = this->getHeight();
     std::size_t width = this->getWidth();
 
-    color_type* d_inputRGBData = nullptr;
-
-    cudaMalloc( &d_inputRGBData, 3 * width * height * sizeof(color_type));
-    cudaMemcpy( d_inputRGBData, internalImage.data(), 3 * width * height * sizeof(color_type), cudaMemcpyHostToDevice );
-
     cudaMalloc( &d_colorYUVData, 3 * width * height * sizeof(color_type));
-
-    dim3 dimBlock(16, 16);
-    dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x,
-                 (width + dimBlock.y -1)/dimBlock.y);
-
-    convertToYUV<<<dimGrid, dimBlock>>>(d_inputRGBData, d_colorYUVData, width, height);
-    cudaDeviceSynchronize();
-
-    cudaFree(d_inputRGBData);
+    cudaMemcpy( d_colorYUVData, colorsYUV.data(), 3 * width * height * sizeof(color_type), cudaMemcpyHostToDevice );
 }
 
 void ImageData::createLabelsForSimilarPixels()
@@ -188,48 +142,43 @@ void ImageData::createLabelsForSimilarPixels()
     unsigned int width = this->getWidth();
     cudaMalloc( &d_componentLabels, width * height * sizeof(int));
 
-    int blockSide = 16;
-    dim3 dimBlock(blockSide, blockSide);
-    dim3 dimGrid((height + dimBlock.y - 1)/dimBlock.y, (width + dimBlock.x - 1)/dimBlock.x);
+    ImageComponentLabeling::setComponentLabels(d_colorYUVData, d_componentLabels, width, height);
+    //setComponentLabelsLocally();
+}
 
-    int numberOfPixelsPerBlock = dimBlock.x * dimBlock.y;
+void ImageData::setComponentLabelsLocally()
+{
+    const unsigned int width = getWidth();
+    const unsigned int height = getHeight();
+    ImageComponentIdentifier toolToFindLabels{colorsYUV, width, height};
 
-    //solve components in local squares
-    ImageComponentLabeling::createLocalComponentLabels <<<dimGrid, dimBlock, (numberOfPixelsPerBlock * sizeof(int))+(3 * numberOfPixelsPerBlock * sizeof(Color::byte))>>>(
-        d_colorYUVData, d_componentLabels, width, height);
+    const std::vector<int>& completedLabels = toolToFindLabels.getComponentLabels();
+    cudaMemcpy( d_componentLabels, completedLabels.data(),
+                width * height * sizeof(int), cudaMemcpyHostToDevice );
     cudaDeviceSynchronize();
+}
 
-    //merge small results into bigger groups
-    while( (blockSide < width || blockSide < height) )
+void ImageData::convertToYUVLocally()
+{
+    colorsYUV.resize(colorsRGB.size());
+    const unsigned int height = this->getHeight();
+    const unsigned int width = this->getWidth();
+
+    for(int row = 0; row < height; ++row)
+    for(int col = 0; col < width; ++col)
     {
-        //compute the number of tiles that are going to be merged in a single thread block
-        int numberOfTileRows = 4;
-        int numberOfTileCols = 4;
+        unsigned int idx = 3*col + 3*row * width;
 
-        if(numberOfTileCols * blockSide > width)
-            numberOfTileCols = (width + blockSide - 1) / blockSide;
+        ImageData::color_type red = colorsRGB[idx+0];
+        ImageData::color_type green = colorsRGB[idx+1];
+        ImageData::color_type blue = colorsRGB[idx+2];
 
-        if(numberOfTileRows * blockSide > height)
-            numberOfTileRows = (height + blockSide - 1) / blockSide;
+        colorsYUV[idx+0] = static_cast<ImageData::color_type>(0.299 * red + 0.587 * green + 0.114 * blue);
+        colorsYUV[idx+1] = static_cast<ImageData::color_type>((-0.169 * red - 0.331 * green + 0.5 * blue) + 128);
+        colorsYUV[idx+2] = static_cast<ImageData::color_type>((0.5 * red - 0.419 * green - 0.081 * blue) + 128);
 
-        int threadsPerTile = 32;
-        if(blockSide < threadsPerTile)
-            threadsPerTile = blockSide;
-
-        dim3 block(numberOfTileRows, numberOfTileCols, threadsPerTile);
-        dim3 grid((height + (numberOfTileRows * blockSide) - 1) / (numberOfTileRows * blockSide),
-                  (width + (numberOfTileCols * blockSide) - 1) / (numberOfTileCols * blockSide));
-        ImageComponentLabeling::mergeSolutionsOnBlockBorders<<<grid, block>>>(
-                d_colorYUVData, d_componentLabels, width, height, blockSide);
-
-        if(numberOfTileCols > numberOfTileRows)
-            blockSide = numberOfTileCols * blockSide;
-        else
-            blockSide = numberOfTileRows * blockSide;
-
-        //TODO update labels on borders
+        /*colorsYUV[idx+0] = static_cast<ImageData::color_type>((76 * red + 150 * green + 29 * blue + 128) >> 8);
+        colorsYUV[idx+1] = static_cast<ImageData::color_type>(((-43 * red - 84 * green + 127 * blue + 128) >> 8) +128);
+        colorsYUV[idx+2] = static_cast<ImageData::color_type>(((127 * red - 106 * green - 21 * blue + 128) >> 8) +128);*/
     }
-
-    //update all labels
-    ImageComponentLabeling::flattenAllEquivalenceTrees<<<dimGrid, dimBlock>>>(d_componentLabels, width, height);
 }
