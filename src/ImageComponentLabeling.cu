@@ -317,7 +317,7 @@ void ImageComponentLabeling::setComponentLabels(Color::byte* d_colorYUVData, int
         else
             blockSide = numberOfTileRows * blockSide;
 
-        //TODO update labels on borders
+        //TODO (opt) update labels on borders
     }
 
     //update all labels

@@ -3,6 +3,7 @@
 
 #include "PixelGraph.hpp"
 #include "PolygonSide.hpp"
+#include "RegionConstructor.hpp"
 #include "Constants.hpp"
 
 class PolygonSideMap
@@ -13,13 +14,17 @@ public:
     ~PolygonSideMap();
 
     std::vector<PolygonSide::Type> getInternalSideTypes();
+    const std::vector<PolygonSide>& getInternalSides() const;
+    const ClipperLib::Paths& getGeneratedRegionBoundaries() const;
 private:
     const PixelGraph&              sourceGraph;
     std::vector<PolygonSide>       polygonSides;
     PolygonSide*                   d_polygonSides;
+    RegionConstructor*             regionConstructor;
 
     void freeDeviceData();
     void constructInternalPolygonSides();
+    void generateRegionBoundaries();
 };
 
 

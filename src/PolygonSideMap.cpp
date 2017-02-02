@@ -2,14 +2,16 @@
 #include "PolygonSideMap.hpp"
 
 PolygonSideMap::PolygonSideMap(const PixelGraph& graph)
-        : sourceGraph{graph}, polygonSides{}, d_polygonSides{nullptr}
+        : sourceGraph{graph}, polygonSides{}, d_polygonSides{nullptr}, regionConstructor{nullptr}
 {
     constructInternalPolygonSides();
+    generateRegionBoundaries();
 }
 
 PolygonSideMap::~PolygonSideMap()
 {
     freeDeviceData();
+    delete regionConstructor;
 }
 
 void PolygonSideMap::freeDeviceData()
@@ -42,4 +44,21 @@ void PolygonSideMap::constructInternalPolygonSides()
     PolygonSideMapConstructing::createMap(d_polygonSides, d_graphData, width, height);
 
     PolygonSideMapConstructing::getCreatedMapData(polygonSides, d_polygonSides, width, height);
+}
+
+const std::vector<PolygonSide>& PolygonSideMap::getInternalSides() const
+{
+    return polygonSides;
+}
+
+void PolygonSideMap::generateRegionBoundaries()
+{
+    const std::size_t width = sourceGraph.getWidth();
+    const std::size_t height = sourceGraph.getHeight();
+    regionConstructor = new RegionConstructor{getInternalSides(), sourceGraph.get1DEdgeValues(), width, height};
+}
+
+const ClipperLib::Paths& PolygonSideMap::getGeneratedRegionBoundaries() const
+{
+    return regionConstructor->getBoundaries();
 }

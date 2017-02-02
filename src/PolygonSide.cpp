@@ -10,7 +10,7 @@
     pointB[0] = bRow;
     pointB[1] = bCol;
 }*/
-PolygonSide::Type PolygonSide::getType()
+PolygonSide::Type PolygonSide::getType() const
 {
     const int FIRST_THREE_BITS = 7;
     return static_cast<PolygonSide::Type>( info & FIRST_THREE_BITS );

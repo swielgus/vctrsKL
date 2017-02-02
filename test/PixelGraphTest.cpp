@@ -297,7 +297,6 @@ TEST_F(PixelGraphTest, resolvingCrossingsOnAComplicatedImageShouldGiveAFinalGrap
 {
     ImageData testedImage("images/smw_boo_input.png");
     testedGraph = new PixelGraph(testedImage);
-    //TODO fix rest of critical crossings
     std::vector<std::vector<color_type>> expectedResult{
             {40, 42, 42, 42, 42, 42, 38,34,34,34,50,42,42,42,42,42,42,10},
             {168,170,170,170,166,194,36,34,34,34,18,165,178,170,170,170,170,138},

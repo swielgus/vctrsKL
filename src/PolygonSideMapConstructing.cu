@@ -32,10 +32,10 @@ PolygonSideMapConstructing::createPolygonSide(PolygonSide* sideData, const Graph
         PolygonSide::Type currentQuarterSideType = PolygonSide::Type::Point;
         if(row != 0 && col != 0)
         {
-            if(isThisQuarterForwardSlash(row, col, width, graphData))
-                currentQuarterSideType = PolygonSide::Type::ForwardSlash;
-            else if(isThisQuarterBackslash(row, col, width, graphData))
+            if(isThisQuarterBackslash(row, col, width, graphData))
                 currentQuarterSideType = PolygonSide::Type::Backslash;
+            else if(isThisQuarterForwardSlash(row, col, width, graphData))
+                currentQuarterSideType = PolygonSide::Type::ForwardSlash;
         }
 
         PolygonSide::point_type rowA = static_cast<PolygonSide::point_type>(row * 100);

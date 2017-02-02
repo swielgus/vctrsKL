@@ -18,7 +18,7 @@ struct PolygonSide
     point_type pointA[2];
     point_type pointB[2];
 
-    Type getType();
+    Type getType() const;
 
     /*PolygonSide(const Type& type, const point_type& aRow, const point_type& aCol,
                 const point_type& bRow = 0.0, const point_type& bCol = 0.0);*/

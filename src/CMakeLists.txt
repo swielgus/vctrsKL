@@ -16,7 +16,13 @@ add_library(PolygonSide PolygonSide.cpp)
 cuda_add_library(PolygonSideMapConstructing PolygonSideMapConstructing.cu)
 target_link_libraries(PolygonSideMapConstructing PolygonSide)
 
+find_package(PkgConfig)
+pkg_search_module(CLIPPER REQUIRED polyclipping)
+include_directories(${CLIPPER_INCLUDE_DIRS})
+
+add_library(RegionConstructor RegionConstructor.cpp)
+target_link_libraries(RegionConstructor ${CLIPPER_LIBRARIES})
 add_library(PolygonSideMap PolygonSideMap.cpp)
-target_link_libraries(PolygonSideMap PixelGraph PolygonSideMapConstructing)
+target_link_libraries(PolygonSideMap PixelGraph PolygonSideMapConstructing RegionConstructor)
 
 add_subdirectory(utils)

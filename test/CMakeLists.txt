@@ -31,7 +31,7 @@ endif()
 file(COPY ${CMAKE_SOURCE_DIR}/images
         DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/)
 
-include_directories(${CMAKE_SOURCE_DIR}/src/)
+include_directories(${CMAKE_SOURCE_DIR}/src/ ${CLIPPER_INCLUDE_DIRS})
 
 add_executable(ImageDataTest ImageDataTest.cpp)
 target_link_libraries(ImageDataTest ImageData gtest gtest_main)

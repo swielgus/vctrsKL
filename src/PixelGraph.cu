@@ -99,8 +99,7 @@ void PixelGraph::resolveCrossings()
     const std::size_t width = getWidth();
     const std::size_t height = getHeight();
     dim3 dimBlock(32, 32);
-    dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x,
-                 (width + dimBlock.y -1)/dimBlock.y);
+    dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x, (width + dimBlock.y -1)/dimBlock.y);
 
     GraphCrossResolving::resolveCriticalCrossings<<<dimGrid, dimBlock>>>(d_pixelConnections, sourceImage.getGPUAddressOfLabelData(), width, height);
     cudaDeviceSynchronize();
