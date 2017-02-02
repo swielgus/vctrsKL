@@ -38,6 +38,7 @@ void RegionConstructor::generateBoundariesByRadialSweeps()
     {
         ClipperLib::PolyTree unionResult;
         ClipperLib::Clipper clipTool;
+        clipTool.PreserveCollinear(true);
         clipTool.AddPaths(chain, ClipperLib::PolyType::ptSubject, true);
         clipTool.Execute(ClipperLib::ClipType::ctUnion, unionResult, ClipperLib::PolyFillType::pftPositive,
                          ClipperLib::PolyFillType::pftPositive);
