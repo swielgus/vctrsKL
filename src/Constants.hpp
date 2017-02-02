@@ -13,7 +13,7 @@ namespace Graph
     using byte = uint8_t;
 }
 
-namespace Cell
+namespace Polygon
 {
     using byte = uint8_t;
     using cord_type = float;
@@ -29,32 +29,6 @@ enum class GraphEdge : Graph::byte
     RIGHT       = 1 << 5,
     UPPER_RIGHT = 1 << 6,
     UP          = 1 << 7
-};
-
-enum class CellSideType : Cell::byte
-{
-    Backslash    = 1,
-    ForwardSlash = 2,
-    Point        = 3
-};
-
-struct CellSide
-{
-    Cell::byte      type;
-    Cell::cord_type pointA[2];
-    Cell::cord_type pointB[2];
-};
-
-struct RegionPoint
-{
-    int idxOfCorrespondingGraphNode;
-    int idxOfCoordinates;
-
-    bool operator==(const RegionPoint& other)
-    {
-        return (idxOfCorrespondingGraphNode == other.idxOfCorrespondingGraphNode) &&
-               (idxOfCoordinates == other.idxOfCoordinates);
-    }
 };
 
 #endif //VCTRSKL_CONSTANTS_HPP

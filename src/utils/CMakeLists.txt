@@ -1,7 +1,7 @@
 include_directories(${CMAKE_SOURCE_DIR}/src/)
 
 add_executable(utilImgTimeMeasuring imgTimeMeasuring.cpp)
-target_link_libraries(utilImgTimeMeasuring ImageData)
+target_link_libraries(utilImgTimeMeasuring PolygonSideMap)
 
 add_executable(utilDrawPolygons polygonDrawing.cpp)
 target_link_libraries(utilDrawPolygons CellMap)

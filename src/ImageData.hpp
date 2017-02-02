@@ -1,6 +1,7 @@
 #ifndef VCTRSKL_IMAGEDATA_HPP
 #define VCTRSKL_IMAGEDATA_HPP
 
+#include <string>
 #include <vector>
 #include "Constants.hpp"
 

@@ -39,5 +39,5 @@ target_link_libraries(ImageDataTest ImageData gtest gtest_main)
 add_executable(PixelGraphTest PixelGraphTest.cpp)
 target_link_libraries(PixelGraphTest PixelGraph gtest gtest_main)
 
-add_executable(CellMapTest CellMapTest.cpp)
-target_link_libraries(CellMapTest CellMap gtest gtest_main)
+add_executable(PolygonSideMapTest PolygonSideMapTest.cpp)
+target_link_libraries(PolygonSideMapTest PolygonSideMap gtest gtest_main)

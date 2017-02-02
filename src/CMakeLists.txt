@@ -12,8 +12,11 @@ cuda_add_library(GraphCrossResolving GraphCrossResolving.cu)
 cuda_add_library(PixelGraph PixelGraph.cu)
 target_link_libraries(PixelGraph GraphConstructing GraphCrossResolving ImageData)
 
-cuda_add_library(CellMapConstructing CellMapConstructing.cu)
-cuda_add_library(CellMap CellMap.cu RegionConstructor.cpp)
-target_link_libraries(CellMap PixelGraph CellMapConstructing)
+add_library(PolygonSide PolygonSide.cpp)
+cuda_add_library(PolygonSideMapConstructing PolygonSideMapConstructing.cu)
+target_link_libraries(PolygonSideMapConstructing PolygonSide)
+
+add_library(PolygonSideMap PolygonSideMap.cpp)
+target_link_libraries(PolygonSideMap PixelGraph PolygonSideMapConstructing)
 
 add_subdirectory(utils)
