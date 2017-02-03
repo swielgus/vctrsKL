@@ -28,13 +28,12 @@ bool isPointToBeAControlOne(const PathPoint& pointData, const std::vector<Polygo
     }
     const PolygonSide& currentPointData = coordinateData[pointData.colOfCoordinates + pointData.rowOfCoordinates * widthOfImage];
     int degreeOfPoint = (pointData.useBPoint) ? (currentPointData.getNumberOfRegionsUsingB()) : (currentPointData.getNumberOfRegionsUsingA());
-
     return (degreeOfPoint < 3);
 }
 
 int main(int argc, char const *argv[])
 {
-    std::string filename = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/rshapes.png";
+    std::string filename = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/superMarioWorld.png";
     if(argc > 1)
         filename = argv[1];
 

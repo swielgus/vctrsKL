@@ -21,6 +21,8 @@ struct PolygonSide
     Type getType() const;
     int getNumberOfRegionsUsingA() const;
     int getNumberOfRegionsUsingB() const;
+    void increaseNumberOfRegionsUsingAByOne();
+    void increaseNumberOfRegionsUsingBByOne();
 
     /*PolygonSide(const Type& type, const point_type& aRow, const point_type& aCol,
                 const point_type& bRow = 0.0, const point_type& bCol = 0.0);*/

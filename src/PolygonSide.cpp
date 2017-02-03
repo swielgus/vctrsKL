@@ -19,11 +19,27 @@ PolygonSide::Type PolygonSide::getType() const
 int PolygonSide::getNumberOfRegionsUsingA() const
 {
     const int LAST_THREE_BITS = 224;
-    return (info & LAST_THREE_BITS);
+    return ((info & LAST_THREE_BITS) >> 5);
 }
 
 int PolygonSide::getNumberOfRegionsUsingB() const
 {
     const int SECOND_THREE_BITS = 28;
-    return (info & SECOND_THREE_BITS);
+    return ((info & SECOND_THREE_BITS) >> 2);
+}
+
+void PolygonSide::increaseNumberOfRegionsUsingAByOne()
+{
+    const int ALL_BUT_LAST_THREE_BITS = 31;
+    int result = getNumberOfRegionsUsingA() + 1;
+    info &= ALL_BUT_LAST_THREE_BITS;
+    info |= (result << 5);
+}
+
+void PolygonSide::increaseNumberOfRegionsUsingBByOne()
+{
+    const int ALL_BUT_SECOND_THREE_BITS = 227;
+    int result = getNumberOfRegionsUsingB() + 1;
+    info &= ALL_BUT_SECOND_THREE_BITS;
+    info |= (result << 2);
 }

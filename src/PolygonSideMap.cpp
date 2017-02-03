@@ -66,8 +66,26 @@ const ClipperLib::Paths& PolygonSideMap::getGeneratedRegionBoundaries() const
 
 void PolygonSideMap::allocatePathPointsOfBoundariesOnDevice()
 {
+    const std::size_t width = sourceGraph.getWidth();
+    const std::size_t height = sourceGraph.getHeight();
     auto pathPoints = regionConstructor->createPathPoints();
     //TODO send this vector of vectors to device
+
+    for(const auto& path : pathPoints)
+    {
+        for(const auto& point : path)
+        {
+            if(point.rowOfCoordinates != height && point.colOfCoordinates != width)
+            {
+                int idxOfCoordinates = point.colOfCoordinates + point.rowOfCoordinates * width;
+                auto& currentCoordinates = polygonSides[idxOfCoordinates];
+                if(point.useBPoint)
+                    currentCoordinates.increaseNumberOfRegionsUsingBByOne();
+                else
+                    currentCoordinates.increaseNumberOfRegionsUsingAByOne();
+            }
+        }
+    }
 }
 
 std::vector<std::vector<PathPoint> > PolygonSideMap::getPathPointBoundaries() const
