@@ -74,3 +74,8 @@ std::vector<std::vector<PathPoint> > PolygonSideMap::getPathPointBoundaries() co
 {
     return regionConstructor->createPathPoints();
 }
+
+const std::vector<ClipperLib::IntPoint>& PolygonSideMap::getColorRepresentatives() const
+{
+    return regionConstructor->getColorRepresentatives();
+}

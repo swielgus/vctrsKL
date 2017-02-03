@@ -12,6 +12,18 @@
 }*/
 PolygonSide::Type PolygonSide::getType() const
 {
-    const int FIRST_THREE_BITS = 7;
-    return static_cast<PolygonSide::Type>( info & FIRST_THREE_BITS );
+    const int FIRST_TWO_BITS = 3;
+    return static_cast<PolygonSide::Type>( info & FIRST_TWO_BITS );
+}
+
+int PolygonSide::getNumberOfRegionsUsingA() const
+{
+    const int LAST_THREE_BITS = 224;
+    return (info & LAST_THREE_BITS);
+}
+
+int PolygonSide::getNumberOfRegionsUsingB() const
+{
+    const int SECOND_THREE_BITS = 28;
+    return (info & SECOND_THREE_BITS);
 }

@@ -17,6 +17,7 @@ public:
     const std::vector<PolygonSide>& getInternalSides() const;
     const ClipperLib::Paths& getGeneratedRegionBoundaries() const;
     std::vector< std::vector<PathPoint> > getPathPointBoundaries() const;
+    const std::vector<ClipperLib::IntPoint>& getColorRepresentatives() const;
 private:
     const PixelGraph&              sourceGraph;
     std::vector<PolygonSide>       polygonSides;

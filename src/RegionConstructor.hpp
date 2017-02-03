@@ -19,6 +19,7 @@ public:
 
     const ClipperLib::Paths& getBoundaries() const;
     std::vector< std::vector<PathPoint> > createPathPoints();
+    const std::vector<ClipperLib::IntPoint>& getColorRepresentatives() const;
 private:
     const std::vector<PolygonSide>&          polygonSideData;
     const std::vector<PixelGraph::edge_type> graphData;
@@ -26,6 +27,7 @@ private:
     unsigned int                             height;
     std::vector<bool>                        wasNodeVisited;
     ClipperLib::Paths                        generatedBoundaries;
+    std::vector<ClipperLib::IntPoint>        colorRepresentatives;
 
     void generateBoundariesByRadialSweeps();
     void markComponentAsVisited(const int rootRow, const int rootCol);

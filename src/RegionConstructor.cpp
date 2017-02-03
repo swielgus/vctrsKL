@@ -7,7 +7,7 @@ RegionConstructor::RegionConstructor(const std::vector<PolygonSide>& usedSideDat
                                      const std::vector<PixelGraph::edge_type>&& usedGraphData,
                                      unsigned int usedWidth, unsigned int usedHeight)
         : polygonSideData{usedSideData}, graphData{std::move(usedGraphData)}, width{usedWidth}, height{usedHeight},
-          wasNodeVisited{}, generatedBoundaries{}
+          wasNodeVisited{}, generatedBoundaries{}, colorRepresentatives{}
 {
     wasNodeVisited.resize(width * height, false);
     generateBoundariesByRadialSweeps();
@@ -29,7 +29,10 @@ void RegionConstructor::generateBoundariesByRadialSweeps()
             //std::cout << "\n" << row << "," << col << " = ";
             ClipperLib::Paths currentPolygonChain = createChainOfPolygonsForRoot(row, col);
             if( !currentPolygonChain.empty() )
+            {
+                colorRepresentatives.emplace_back(row, col);
                 gatheredPolygonChains.push_back(std::move(currentPolygonChain));
+            }
             //std::cout << "\n";
         }
     }
@@ -48,6 +51,7 @@ void RegionConstructor::generateBoundariesByRadialSweeps()
             /*std::cout << "\n";
             for(const auto& point : unionResult.GetFirst()->Contour)
                 std::cout << point.X << "," << point.Y << "|";*/
+
             generatedBoundaries.push_back(std::move(unionResult.GetFirst()->Contour));
         }
     }
@@ -446,4 +450,9 @@ std::vector<std::vector<PathPoint> > RegionConstructor::createPathPoints()
     }
 
     return result;
+}
+
+const std::vector<ClipperLib::IntPoint>& RegionConstructor::getColorRepresentatives() const
+{
+    return colorRepresentatives;
 }

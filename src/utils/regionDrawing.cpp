@@ -1,35 +1,29 @@
 #include <iostream>
-#include <chrono>
-#include <CellMap.hpp>
+#include <fstream>
+#include <PolygonSideMap.hpp>
 
 int main(int argc, char const *argv[])
 {
-    if(argc < 2)
-        return -1;
+    std::string filename = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/dolphin.png";
+    if(argc > 1)
+        filename = argv[1];
 
-    std::string outputName = "out.svg";
+    std::string outputName = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/utilCreated/out.svg";
     if(argc > 2)
         outputName = argv[2];
 
-    auto start = std::chrono::steady_clock::now();
-    //ImageData testedImage(argv[1]);
-    ImageData testedImage("/home/sw/studia2016-2017Z/pracaMagisterska/conv/rickdan.png");
+    ImageData testedImage(filename);
     PixelGraph graphOfTestedImage(testedImage);
     graphOfTestedImage.resolveCrossings();
-    auto duration = std::chrono::steady_clock::now() - start;
-    std::cout << "\nTime before cell: " << std::chrono::duration_cast< std::chrono::microseconds >(duration).count() << " microseconds \n"
-              << "Time before cell: " << std::chrono::duration_cast< std::chrono::milliseconds >(duration).count() << " milliseconds \n"
-              << "Time before cell: " << std::chrono::duration_cast< std::chrono::seconds >(duration).count() << " seconds \n";
-    CellMap testedCellMap = CellMap(graphOfTestedImage);
+    PolygonSideMap testedPolyMap(graphOfTestedImage);
 
-    auto cellPointDetails = testedCellMap.getCellSides();
-    auto cellPointPaths = testedCellMap.getCreatedPointPaths();
-    const Cell::byte firstThreeBitsMask = 7;
+    auto regionBoundaries = testedPolyMap.getGeneratedRegionBoundaries();
+    const auto& colorRepresentatives = testedPolyMap.getColorRepresentatives();
     const int widthOfImage = testedImage.getWidth();
     const int heightOfImage = testedImage.getHeight();
 
     std::string outputHeader = "<svg xmlns=\"http://www.w3.org/2000/svg\" height=\""
-                               + std::to_string(heightOfImage) + "\" width=\"" + std::to_string(widthOfImage) + "\">\n";
+                               + std::to_string(heightOfImage*100) + "\" width=\"" + std::to_string(widthOfImage*100) + "\">\n";
     std::string pathDStart = "<path d=\"";
     std::string pathDEnd = " Z\"";
 
@@ -41,99 +35,112 @@ int main(int argc, char const *argv[])
     std::ofstream ofs (outputName, std::ofstream::out);
 
     ofs << outputHeader;
-
-
-    for(const auto& path : cellPointPaths)
+    for(int i = 0; i < regionBoundaries.size(); ++i)
     {
-        std::cout << "\nStart of path\n";
+        const auto& path = regionBoundaries[i];
         ofs << pathDStart;
-        bool isThePointFirst = true;
-        for(const auto& point : path)
+        bool isItTheStartOfPath = true;
+        int rowToGetColorFrom = colorRepresentatives[i].X;
+        int colToGetColorFrom = colorRepresentatives[i].Y;
+        for(int j = 0; j < path.size(); ++j)
         {
-            const auto& currentDetails = cellPointDetails[point.idxOfCoordinates];
-            std::cout << "-(" << point.idxOfCoordinates << ")E";
-
-            if(isThePointFirst)
+            const auto& point = path[j];
+            if(isItTheStartOfPath)
             {
-                ofs << "M";
-                isThePointFirst = false;
+                isItTheStartOfPath = false;
+                ofs << " M";
             }
             else
             {
                 ofs << " L";
             }
+            ofs << point.Y << "," << point.X;
+        }
+        //ofs << pathDEnd << " fill=\"none\" stroke=\"#000\" stroke-width=\"5\" " << pathEnd;
 
-            if( (currentDetails.type & firstThreeBitsMask) == static_cast<Cell::byte>(CellSideType::Backslash) )
+        ofs << pathDEnd << pathFillStart << +testedImage.getPixelRed(rowToGetColorFrom, colToGetColorFrom)
+            << "," << +testedImage.getPixelGreen(rowToGetColorFrom, colToGetColorFrom)
+            << "," << +testedImage.getPixelBlue(rowToGetColorFrom, colToGetColorFrom) << pathFillEnd << pathEnd;
+    }
+
+
+        /*const Cell::byte firstThreeBitsMask = 7;
+    for(int row = 0; row < heightOfImage; ++row)
+        for(int col = 0; col < widthOfImage; ++col)
+        {
+            int currentIdxInSides = col + row * (widthOfImage+1);
+
+            const auto& detailsOfUpperLeft = cellPointDetails[currentIdxInSides];
+            const auto& detailsOfUpperRight = cellPointDetails[currentIdxInSides+1];
+            const auto& detailsOfLowerLeft = cellPointDetails[currentIdxInSides+widthOfImage+1];
+            const auto& detailsOfLowerRight = cellPointDetails[currentIdxInSides+widthOfImage+2];
+
+            ofs << pathDStart;
+            ofs << "M";
+            if( (detailsOfUpperLeft.type & firstThreeBitsMask) == static_cast<Cell::byte>(CellSideType::Backslash) )
             {
-                if(point.directionToCoordinates == GraphEdge::UPPER_LEFT)
-                {
-                    std::cout << "-Bul[" << currentDetails.pointB[0] << "," << currentDetails.pointB[1] << "]";
-                    ofs << currentDetails.pointB[1] << "," << currentDetails.pointB[0];
-                }
-                else if(point.directionToCoordinates == GraphEdge::UPPER_RIGHT)
-                {
-                    std::cout << "-Bur[" << currentDetails.pointB[0] << "," << currentDetails.pointB[1] << "]";
-                    std::cout << "-Bur[" << currentDetails.pointA[0] << "," << currentDetails.pointA[1] << "]";
-                    ofs << currentDetails.pointB[1] << "," << currentDetails.pointB[0] << " L";
-                    ofs << currentDetails.pointA[1] << "," << currentDetails.pointA[0];
-                }
-                else if(point.directionToCoordinates == GraphEdge::LOWER_LEFT)
-                {
-                    std::cout << "-Bll[" << currentDetails.pointA[0] << "," << currentDetails.pointA[1] << "]";
-                    std::cout << "-Bll[" << currentDetails.pointB[0] << "," << currentDetails.pointB[1] << "]";
-                    ofs << currentDetails.pointA[1] << "," << currentDetails.pointA[0] << " L";
-                    ofs << currentDetails.pointB[1] << "," << currentDetails.pointB[0];
-                }
-                else if(point.directionToCoordinates == GraphEdge::LOWER_RIGHT)
-                {
-                    std::cout << "-Blr[" << currentDetails.pointA[0] << "," << currentDetails.pointA[1] << "]";
-                    ofs << currentDetails.pointA[1] << "," << currentDetails.pointA[0];
-                }
-                else
-                {
-                    throw std::out_of_range("Unknown position");
-                }
+                ofs << detailsOfUpperLeft.pointB[1] << "," << detailsOfUpperLeft.pointB[0];
             }
-            else if( (currentDetails.type & firstThreeBitsMask) == static_cast<Cell::byte>(CellSideType::ForwardSlash) )
+            else if( (detailsOfUpperLeft.type & firstThreeBitsMask) == static_cast<Cell::byte>(CellSideType::ForwardSlash) )
             {
-                if(point.directionToCoordinates == GraphEdge::UPPER_LEFT)
-                {
-                    std::cout << "-Ful[" << currentDetails.pointA[0] << "," << currentDetails.pointA[1] << "]";
-                    std::cout << "-Ful[" << currentDetails.pointB[0] << "," << currentDetails.pointB[1] << "]";
-                    ofs << currentDetails.pointA[1] << "," << currentDetails.pointA[0] << " L";
-                    ofs << currentDetails.pointB[1] << "," << currentDetails.pointB[0];
-                }
-                else if(point.directionToCoordinates == GraphEdge::UPPER_RIGHT)
-                {
-                    std::cout << "-Fur[" << currentDetails.pointB[0] << "," << currentDetails.pointB[1] << "]";
-                    ofs << currentDetails.pointB[1] << "," << currentDetails.pointB[0];
-                }
-                else if(point.directionToCoordinates == GraphEdge::LOWER_LEFT)
-                {
-                    std::cout << "-Fll[" << currentDetails.pointA[0] << "," << currentDetails.pointA[1] << "]";
-                    ofs << currentDetails.pointA[1] << "," << currentDetails.pointA[0];
-                }
-                else if(point.directionToCoordinates == GraphEdge::LOWER_RIGHT)
-                {
-                    std::cout << "-Flr[" << currentDetails.pointB[0] << "," << currentDetails.pointB[1] << "]";
-                    std::cout << "-Flr[" << currentDetails.pointA[0] << "," << currentDetails.pointA[1] << "]";
-                    ofs << currentDetails.pointB[1] << "," << currentDetails.pointB[0] << " L";
-                    ofs << currentDetails.pointA[1] << "," << currentDetails.pointA[0];
-                }
-                else
-                {
-                    throw std::out_of_range("Unknown position");
-                }
+                ofs << detailsOfUpperLeft.pointA[1] << "," << detailsOfUpperLeft.pointA[0] << " L";
+                ofs << detailsOfUpperLeft.pointB[1] << "," << detailsOfUpperLeft.pointB[0];
             }
             else
             {
-                std::cout << "-P[" << currentDetails.pointA[0] << "," << currentDetails.pointA[1] << "]";
-                ofs << currentDetails.pointA[1] << "," << currentDetails.pointA[0];
+                ofs << detailsOfUpperLeft.pointA[1] << "," << detailsOfUpperLeft.pointA[0];
             }
-        }
-        ofs << pathDEnd << " fill=\"none\" stroke=\"#000\" stroke-width=\"0.1\" " << pathEnd;
-        std::cout << "\nend of path";
-    }
+
+            ofs << "L";
+            if( (detailsOfLowerLeft.type & firstThreeBitsMask) == static_cast<Cell::byte>(CellSideType::Backslash) )
+            {
+                ofs << detailsOfLowerLeft.pointA[1] << "," << detailsOfLowerLeft.pointA[0] << " L";
+                ofs << detailsOfLowerLeft.pointB[1] << "," << detailsOfLowerLeft.pointB[0];
+            }
+            else if( (detailsOfLowerLeft.type & firstThreeBitsMask) == static_cast<Cell::byte>(CellSideType::ForwardSlash) )
+            {
+                ofs << detailsOfLowerLeft.pointA[1] << "," << detailsOfLowerLeft.pointA[0];
+            }
+            else
+            {
+                ofs << detailsOfLowerLeft.pointA[1] << "," << detailsOfLowerLeft.pointA[0];
+            }
+
+            ofs << "L";
+            if( (detailsOfLowerRight.type & firstThreeBitsMask) == static_cast<Cell::byte>(CellSideType::Backslash) )
+            {
+                ofs << detailsOfLowerRight.pointA[1] << "," << detailsOfLowerRight.pointA[0];
+            }
+            else if( (detailsOfLowerRight.type & firstThreeBitsMask) == static_cast<Cell::byte>(CellSideType::ForwardSlash) )
+            {
+                ofs << detailsOfLowerRight.pointB[1] << "," << detailsOfLowerRight.pointB[0] << " L";
+                ofs << detailsOfLowerRight.pointA[1] << "," << detailsOfLowerRight.pointA[0];
+            }
+            else
+            {
+                ofs << detailsOfLowerRight.pointA[1] << "," << detailsOfLowerRight.pointA[0];
+            }
+
+            ofs << "L";
+            if( (detailsOfUpperRight.type & firstThreeBitsMask) == static_cast<Cell::byte>(CellSideType::Backslash) )
+            {
+                ofs << detailsOfUpperRight.pointB[1] << "," << detailsOfUpperRight.pointB[0] << " L";
+                ofs << detailsOfUpperRight.pointA[1] << "," << detailsOfUpperRight.pointA[0];
+            }
+            else if( (detailsOfUpperRight.type & firstThreeBitsMask) == static_cast<Cell::byte>(CellSideType::ForwardSlash) )
+            {
+                ofs << detailsOfUpperRight.pointB[1] << "," << detailsOfUpperRight.pointB[0];
+            }
+            else
+            {
+                ofs << detailsOfUpperRight.pointA[1] << "," << detailsOfUpperRight.pointA[0];
+            }
+            //ofs << pathDEnd << " fill=\"none\" stroke=\"#000\" stroke-width=\"0.1\" " << pathEnd;
+
+            ofs << pathDEnd << pathFillStart << +testedImage.getPixelRed(row, col)
+                << "," << +testedImage.getPixelGreen(row, col)
+                << "," << +testedImage.getPixelBlue(row, col) << pathFillEnd << pathEnd;
+        }*/
 
     ofs << outputEnd;
     ofs.close();
