@@ -14,10 +14,12 @@ public:
     ~PolygonSideMap();
 
     std::vector<PolygonSide::Type> getInternalSideTypes();
-    const std::vector<PolygonSide>& getInternalSides() const;
     const ClipperLib::Paths& getGeneratedRegionBoundaries() const;
     std::vector< std::vector<PathPoint> > getPathPointBoundaries() const;
     const std::vector<ClipperLib::IntPoint>& getColorRepresentatives() const;
+    PolygonSide* getGPUAddressOfPolygonCoordinateData();
+    unsigned int getImageWidth() const;
+    std::vector<PolygonSide> getInternalSidesFromDevice() const;
 private:
     const PixelGraph&              sourceGraph;
     std::vector<PolygonSide>       polygonSides;
@@ -27,7 +29,7 @@ private:
     void freeDeviceData();
     void constructInternalPolygonSides();
     void generateRegionBoundaries();
-    void allocatePathPointsOfBoundariesOnDevice();
+    const std::vector<PolygonSide>& getInternalSides() const;
 };
 
 

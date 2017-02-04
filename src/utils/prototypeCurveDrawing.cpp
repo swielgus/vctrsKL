@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-#include <PolygonSideMap.hpp>
+#include <CurveOptimizer.hpp>
 
 unsigned int getCoordinate(const PathPoint& pointData, const std::vector<PolygonSide>& coordinateData,
                            const int coordinateIdx, unsigned int widthOfImage, unsigned int heightOfImage)
@@ -33,7 +33,7 @@ bool isPointToBeAControlOne(const PathPoint& pointData, const std::vector<Polygo
 
 int main(int argc, char const *argv[])
 {
-    std::string filename = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/rickdan.png";
+    std::string filename = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/dolphin.png";
     if(argc > 1)
         filename = argv[1];
 
@@ -45,8 +45,9 @@ int main(int argc, char const *argv[])
     PixelGraph graphOfTestedImage(testedImage);
     graphOfTestedImage.resolveCrossings();
     PolygonSideMap testedPolyMap(graphOfTestedImage);
+    CurveOptimizer testedCurveOptimizer(testedPolyMap);
 
-    auto coordinateData = testedPolyMap.getInternalSides();
+    auto coordinateData = testedPolyMap.getInternalSidesFromDevice();
     auto regionBoundaries = testedPolyMap.getPathPointBoundaries();
     const auto& colorRepresentatives = testedPolyMap.getColorRepresentatives();
     const unsigned int widthOfImage = testedImage.getWidth();
@@ -54,7 +55,7 @@ int main(int argc, char const *argv[])
 
     std::string outputHeader = "<svg xmlns=\"http://www.w3.org/2000/svg\" height=\""
                                + std::to_string(heightOfImage*100) + "\" width=\"" + std::to_string(widthOfImage*100) + "\">\n";
-    std::string pathDStart = "<path d=\"";
+    std::string pathDStart = "\n<path d=\"";
     std::string pathDEnd = " Z\"";
 
     std::string pathFillStart = " fill=\"rgb(";

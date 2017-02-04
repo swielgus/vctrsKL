@@ -1,6 +1,6 @@
 #include <iostream>
 #include <chrono>
-#include "PolygonSideMap.hpp"
+#include "CurveOptimizer.hpp"
 
 int main()
 {
@@ -16,13 +16,16 @@ int main()
     auto polygonMapStart = std::chrono::steady_clock::now();
     PolygonSideMap testedPolyMap(testedGraph);
     auto polygonMapEnd = std::chrono::steady_clock::now() - polygonMapStart;
+    auto curveOptimizerStart = std::chrono::steady_clock::now();
+    CurveOptimizer testedCurveOptimizer(testedPolyMap);
+    auto curveOptimizerEnd = std::chrono::steady_clock::now() - curveOptimizerStart;
 
     std::cout   << "\nTime measured: "
-                << "\n ImageData: \t "
+                << "\n ImageData: \t\t "
                 << std::chrono::duration_cast< std::chrono::nanoseconds >(imageDataEnd).count() << " nanoseconds = "
                 << std::chrono::duration_cast< std::chrono::microseconds >(imageDataEnd).count() << " microseconds = "
                 << std::chrono::duration_cast< std::chrono::milliseconds >(imageDataEnd).count() << " milliseconds"
-                << "\n PixelGraph: \t "
+                << "\n PixelGraph: \t\t "
                 << std::chrono::duration_cast< std::chrono::nanoseconds >(graphDataEnd).count() << " nanoseconds = "
                 << std::chrono::duration_cast< std::chrono::microseconds >(graphDataEnd).count() << " microseconds = "
                 << std::chrono::duration_cast< std::chrono::milliseconds >(graphDataEnd).count() << " milliseconds"
@@ -30,6 +33,10 @@ int main()
                 << std::chrono::duration_cast< std::chrono::nanoseconds >(polygonMapEnd).count() << " nanoseconds = "
                 << std::chrono::duration_cast< std::chrono::microseconds >(polygonMapEnd).count() << " microseconds = "
                 << std::chrono::duration_cast< std::chrono::milliseconds >(polygonMapEnd).count() << " milliseconds"
+                << "\n CurveOptimizer: \t "
+                << std::chrono::duration_cast< std::chrono::nanoseconds >(curveOptimizerEnd).count() << " nanoseconds = "
+                << std::chrono::duration_cast< std::chrono::microseconds >(curveOptimizerEnd).count() << " microseconds = "
+                << std::chrono::duration_cast< std::chrono::milliseconds >(curveOptimizerEnd).count() << " milliseconds"
               << "\n";
     return 0;
 }

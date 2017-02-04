@@ -6,7 +6,6 @@ PolygonSideMap::PolygonSideMap(const PixelGraph& graph)
 {
     constructInternalPolygonSides();
     generateRegionBoundaries();
-    allocatePathPointsOfBoundariesOnDevice();
 }
 
 PolygonSideMap::~PolygonSideMap()
@@ -64,33 +63,6 @@ const ClipperLib::Paths& PolygonSideMap::getGeneratedRegionBoundaries() const
     return regionConstructor->getBoundaries();
 }
 
-void PolygonSideMap::allocatePathPointsOfBoundariesOnDevice()
-{
-    const std::size_t width = sourceGraph.getWidth();
-    const std::size_t height = sourceGraph.getHeight();
-    auto pathPoints = regionConstructor->createPathPoints();
-    //TODO send this vector of vectors to device
-
-    for(const auto& path : pathPoints)
-    {
-        for(const auto& point : path)
-        {
-            if(point.rowOfCoordinates != height && point.colOfCoordinates != width)
-            {
-                int idxOfCoordinates = point.colOfCoordinates + point.rowOfCoordinates * width;
-                auto& currentCoordinates = polygonSides[idxOfCoordinates];
-                if(currentCoordinates.getType() != PolygonSide::Type::Point)
-                {
-                    if(point.useBPoint)
-                        currentCoordinates.increaseNumberOfRegionsUsingBByOne();
-                    else
-                        currentCoordinates.increaseNumberOfRegionsUsingAByOne();
-                }
-            }
-        }
-    }
-}
-
 std::vector<std::vector<PathPoint> > PolygonSideMap::getPathPointBoundaries() const
 {
     return regionConstructor->createPathPoints();
@@ -99,4 +71,23 @@ std::vector<std::vector<PathPoint> > PolygonSideMap::getPathPointBoundaries() co
 const std::vector<ClipperLib::IntPoint>& PolygonSideMap::getColorRepresentatives() const
 {
     return regionConstructor->getColorRepresentatives();
+}
+
+PolygonSide* PolygonSideMap::getGPUAddressOfPolygonCoordinateData()
+{
+    return d_polygonSides;
+}
+
+unsigned int PolygonSideMap::getImageWidth() const
+{
+    return sourceGraph.getWidth();
+}
+
+std::vector<PolygonSide> PolygonSideMap::getInternalSidesFromDevice() const
+{
+    std::vector<PolygonSide> result;
+    const std::size_t width = sourceGraph.getWidth();
+    const std::size_t height = sourceGraph.getHeight();
+    PolygonSideMapConstructing::getCreatedMapData(result, d_polygonSides, width, height);
+    return std::move(result);
 }
