@@ -38,6 +38,20 @@ PolygonSideMapConstructing::createPolygonSide(PolygonSide* sideData, const Graph
                 currentQuarterSideType = PolygonSide::Type::ForwardSlash;
         }
 
+        PolygonSide::info_type numberOfRegionsUsingPointA = 0;
+        if(row > 0 && col > 0 && currentQuarterSideType == PolygonSide::Type::Point)
+        {
+            Graph::byte currentNodeGraphData = graphData[idxOfQuarter];
+            Graph::byte upperLeftNodeGraphData = graphData[idxOfQuarter - width - 1];
+            bool isCurrentNodeConnectedUp = isThereAnEdge(currentNodeGraphData, GraphEdge::UP);
+            bool isCurrentNodeConnectedLeft = isThereAnEdge(currentNodeGraphData, GraphEdge::LEFT);
+            bool isUpperLeftNodeConnectedDown = isThereAnEdge(upperLeftNodeGraphData, GraphEdge::DOWN);
+            bool isUpperLeftNodeConnectedRight = isThereAnEdge(upperLeftNodeGraphData, GraphEdge::RIGHT);
+            numberOfRegionsUsingPointA =
+                    (4 - isCurrentNodeConnectedUp - isCurrentNodeConnectedLeft - isUpperLeftNodeConnectedDown -
+                    isUpperLeftNodeConnectedRight) << 5;
+        }
+
         PolygonSide::point_type rowA = static_cast<PolygonSide::point_type>(row * 100);
         PolygonSide::point_type colA = static_cast<PolygonSide::point_type>(col * 100);
         PolygonSide::point_type rowB = static_cast<PolygonSide::point_type>(row * 100);
@@ -57,7 +71,7 @@ PolygonSideMapConstructing::createPolygonSide(PolygonSide* sideData, const Graph
             colB += 25.0f;
         }
 
-        sideData[idxOfQuarter].info = static_cast<PolygonSide::info_type>(currentQuarterSideType);
+        sideData[idxOfQuarter].info = numberOfRegionsUsingPointA | static_cast<PolygonSide::info_type>(currentQuarterSideType);
         sideData[idxOfQuarter].pointA[0] = rowA;
         sideData[idxOfQuarter].pointA[1] = colA;
         sideData[idxOfQuarter].pointB[0] = rowB;

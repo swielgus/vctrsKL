@@ -79,10 +79,13 @@ void PolygonSideMap::allocatePathPointsOfBoundariesOnDevice()
             {
                 int idxOfCoordinates = point.colOfCoordinates + point.rowOfCoordinates * width;
                 auto& currentCoordinates = polygonSides[idxOfCoordinates];
-                if(point.useBPoint)
-                    currentCoordinates.increaseNumberOfRegionsUsingBByOne();
-                else
-                    currentCoordinates.increaseNumberOfRegionsUsingAByOne();
+                if(currentCoordinates.getType() != PolygonSide::Type::Point)
+                {
+                    if(point.useBPoint)
+                        currentCoordinates.increaseNumberOfRegionsUsingBByOne();
+                    else
+                        currentCoordinates.increaseNumberOfRegionsUsingAByOne();
+                }
             }
         }
     }
