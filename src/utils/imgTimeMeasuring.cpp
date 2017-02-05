@@ -4,7 +4,7 @@
 
 int main()
 {
-    std::string fileName = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/ftl.png";
+    std::string fileName = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/superMarioWorld.png";
 
     auto imageDataStart = std::chrono::steady_clock::now();
     ImageData testedImage(fileName);

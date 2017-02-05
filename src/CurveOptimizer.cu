@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <iostream>
+#include <random>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include "CurveOptimizer.hpp"
@@ -22,15 +23,38 @@ CurveOptimizer::~CurveOptimizer()
 
 void CurveOptimizer::optimizeEnergyInAllPaths()
 {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    //TODO make the neighborhood radius externally configurable
+    const Polygon::cord_type RADIUS = 12;
+    const int GUESSES_PER_POINT = 4;
+    std::uniform_real_distribution<> dis(-RADIUS, RADIUS);
+
     for(int pathIdx = 0; pathIdx < usedPathPoints.size(); ++pathIdx)
     {
         const unsigned int numberOfPathPoints = usedPathPoints[pathIdx].size();
         const unsigned int& addressOffsetOfPath = pathAddressOffsets[pathIdx];
+        std::vector<Polygon::cord_type> randomShiftPointValues(numberOfPathPoints * 2 * GUESSES_PER_POINT);
 
-        CurveControlPointSmoothing::optimizeCurve<<<1, numberOfPathPoints,
-                                                    2 * numberOfPathPoints * sizeof(PolygonSide::point_type)>>>(
-            d_coordinateData, d_pathPointData, addressOffsetOfPath, imageWidth, imageHeight);
-        cudaDeviceSynchronize();
+        std::generate(randomShiftPointValues.begin(), randomShiftPointValues.end(), [&](){ return dis(gen); });
+
+        //for(int i = 0; i < 4; ++i)
+        {
+            Polygon::cord_type* d_randomShiftPointValues;
+            cudaMalloc( &d_randomShiftPointValues, randomShiftPointValues.size() * sizeof(Polygon::cord_type));
+            cudaMemcpy( d_randomShiftPointValues, randomShiftPointValues.data(),
+                        randomShiftPointValues.size() * sizeof(Polygon::cord_type),
+                        cudaMemcpyHostToDevice );
+
+            CurveControlPointSmoothing::optimizeCurve<<<1, numberOfPathPoints,
+                    2 * numberOfPathPoints * sizeof(PolygonSide::point_type)>>>(
+                            d_coordinateData, d_pathPointData, addressOffsetOfPath, imageWidth, imageHeight,
+                            d_randomShiftPointValues, RADIUS);
+            cudaDeviceSynchronize();
+
+            cudaFree(d_randomShiftPointValues);
+        }
     }
 }
 
