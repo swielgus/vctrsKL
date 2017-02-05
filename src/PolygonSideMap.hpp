@@ -19,6 +19,7 @@ public:
     const std::vector<ClipperLib::IntPoint>& getColorRepresentatives() const;
     PolygonSide* getGPUAddressOfPolygonCoordinateData();
     unsigned int getImageWidth() const;
+    unsigned int getImageHeight() const;
     std::vector<PolygonSide> getInternalSidesFromDevice() const;
 private:
     const PixelGraph&              sourceGraph;

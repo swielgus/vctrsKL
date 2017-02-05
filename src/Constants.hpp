@@ -19,6 +19,11 @@ namespace Polygon
     using cord_type = float;
 }
 
+namespace Curve
+{
+    using param_type = float;
+}
+
 enum class GraphEdge : Graph::byte
 {
     UPPER_LEFT  = 1 << 0,

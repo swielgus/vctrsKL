@@ -6,7 +6,8 @@
 #include "CurveControlPointSmoothing.hpp"
 
 CurveOptimizer::CurveOptimizer(PolygonSideMap& usedSideMap)
-    : imageWidth{usedSideMap.getImageWidth()}, d_coordinateData{nullptr}, usedPathPoints{}, pathAddressOffsets{}, d_pathPointData{nullptr}
+    : imageWidth{usedSideMap.getImageWidth()}, imageHeight{usedSideMap.getImageHeight()}, d_coordinateData{nullptr},
+      usedPathPoints{}, pathAddressOffsets{}, d_pathPointData{nullptr}
 {
     d_coordinateData = usedSideMap.getGPUAddressOfPolygonCoordinateData();
     usedPathPoints = std::move(usedSideMap.getPathPointBoundaries());
@@ -28,7 +29,7 @@ void CurveOptimizer::optimizeEnergyInAllPaths()
 
         CurveControlPointSmoothing::optimizeCurve<<<1, numberOfPathPoints,
                                                     2 * numberOfPathPoints * sizeof(PolygonSide::point_type)>>>(
-            d_coordinateData, d_pathPointData, addressOffsetOfPath, imageWidth);
+            d_coordinateData, d_pathPointData, addressOffsetOfPath, imageWidth, imageHeight);
         cudaDeviceSynchronize();
     }
 }

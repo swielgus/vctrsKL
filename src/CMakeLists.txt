@@ -26,7 +26,6 @@ add_library(PolygonSideMap PolygonSideMap.cpp)
 target_link_libraries(PolygonSideMap PixelGraph PolygonSideMapConstructing RegionConstructor)
 
 cuda_add_library(CurveControlPointSmoothing CurveControlPointSmoothing.cu)
-target_link_libraries(CurveControlPointSmoothing PolygonSide)
 cuda_add_library(CurveOptimizer CurveOptimizer.cu)
 target_link_libraries(CurveOptimizer PolygonSideMap CurveControlPointSmoothing)
 

@@ -12,6 +12,7 @@ public:
     ~CurveOptimizer();
 private:
     unsigned int                         imageWidth;
+    unsigned int                         imageHeight;
     PolygonSide*                         d_coordinateData;
     std::vector<std::vector<PathPoint> > usedPathPoints;
     std::vector<unsigned int>            pathAddressOffsets;

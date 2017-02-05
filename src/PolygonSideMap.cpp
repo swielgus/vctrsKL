@@ -83,6 +83,11 @@ unsigned int PolygonSideMap::getImageWidth() const
     return sourceGraph.getWidth();
 }
 
+unsigned int PolygonSideMap::getImageHeight() const
+{
+    return sourceGraph.getHeight();
+}
+
 std::vector<PolygonSide> PolygonSideMap::getInternalSidesFromDevice() const
 {
     std::vector<PolygonSide> result;
