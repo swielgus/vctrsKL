@@ -17,9 +17,11 @@ private:
     std::vector<std::vector<PathPoint> > usedPathPoints;
     std::vector<unsigned int>            pathAddressOffsets;
     PathPoint*                           d_pathPointData;
+    bool*                                d_omitPointDuringOptimization;
 
     void allocatePathPointDataOnDevice();
     void optimizeEnergyInAllPaths();
+    void checkWhichPointsAreToBeOmitted();
 };
 
 

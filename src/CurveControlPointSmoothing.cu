@@ -49,10 +49,23 @@ CurveControlPointSmoothing::getCurvatureIntegral(const ControlPoint& startPoint,
     return result;
 }
 
+__device__ int CurveControlPointSmoothing::getIdxOfRelativePoint(const int& source, int steps, const int& pathLength)
+{
+    int result = source + steps;
+
+    if(steps < 0 && result < 0)
+        result += pathLength;
+    else if(steps > 0 && result >= pathLength)
+        result -= pathLength;
+
+    return result;
+}
+
 __global__ void
 CurveControlPointSmoothing::optimizeCurve(PolygonSide* coordinateData, const PathPoint* pathData,
                                           const unsigned int pathOffset, unsigned int width, unsigned int height,
-                                          Polygon::cord_type* randomShiftPointValues, const Polygon::cord_type radius)
+                                          Polygon::cord_type* randomShiftPointValues, const Polygon::cord_type radius,
+                                          bool* omitPoint, int pathLength)
 {
     //TODO make sample number externally configurable
     //TODO make number of guesses externally configurable
@@ -60,37 +73,43 @@ CurveControlPointSmoothing::optimizeCurve(PolygonSide* coordinateData, const Pat
     const int INTEGRAL_SAMPLES = 16;
     const int PATH_ITERATIONS = 4;
 
-    int idxOfPoint = threadIdx.x;
-    int pathLength = blockDim.x;
+    int idxOfPoint = blockIdx.x * blockDim.x + threadIdx.x;
+    if(idxOfPoint >= pathLength)
+    {
+        return;
+    }
+    __syncthreads();
+
+    int idxOfPointInBlock = threadIdx.x;
+
     const PathPoint* currentPathData = pathData + pathOffset;
 
     extern __shared__ int sMem[];
     Polygon::cord_type* originalRows = (Polygon::cord_type*)sMem;
-    Polygon::cord_type* originalCols = (Polygon::cord_type*)&sMem[pathLength];
+    Polygon::cord_type* originalCols = (Polygon::cord_type*)&sMem[blockDim.x];
 
     {
         Polygon::cord_type currentRow = getCoordinateOfPathPoint(idxOfPoint, currentPathData, coordinateData, width,
                                                                  height, 0);
         Polygon::cord_type currentCol = getCoordinateOfPathPoint(idxOfPoint, currentPathData, coordinateData, width,
                                                                  height, 1);
-        originalRows[idxOfPoint] = currentRow;
-        originalCols[idxOfPoint] = currentCol;
+        originalRows[idxOfPointInBlock] = currentRow;
+        originalCols[idxOfPointInBlock] = currentCol;
     }
-
-    int idxOf2xPreviousPoint = idxOfPoint - 2;
-    if(idxOf2xPreviousPoint < 0) idxOf2xPreviousPoint += pathLength;
-
-    int idxOfPreviousPoint = idxOfPoint - 1;
-    if(idxOfPreviousPoint < 0) idxOfPreviousPoint += pathLength;
-
-    int idxOfNextPoint = idxOfPoint + 1;
-    if(idxOfNextPoint >= pathLength) idxOfNextPoint -= pathLength;
-
-    int idxOf2xNextPoint = idxOfPoint + 2;
-    if(idxOf2xNextPoint >= pathLength) idxOf2xNextPoint -= pathLength;
     __syncthreads();
 
-    ControlPoint controlPointToModify{originalRows[idxOfPoint], originalCols[idxOfPoint]};
+    if(omitPoint[idxOfPoint + pathOffset])
+    {
+        return;
+    }
+    __syncthreads();
+
+    int idxOf2xPreviousPoint = getIdxOfRelativePoint(idxOfPointInBlock, -2, pathLength);
+    int idxOfPreviousPoint = getIdxOfRelativePoint(idxOfPointInBlock, -1, pathLength);
+    int idxOfNextPoint = getIdxOfRelativePoint(idxOfPointInBlock, 1, pathLength);
+    int idxOf2xNextPoint = getIdxOfRelativePoint(idxOfPointInBlock, 2, pathLength);
+
+    ControlPoint controlPointToModify{originalRows[idxOfPointInBlock], originalCols[idxOfPointInBlock]};
     ControlPoint prev2xControlPoint{originalRows[idxOf2xPreviousPoint], originalCols[idxOf2xPreviousPoint]};
     ControlPoint prevControlPoint{originalRows[idxOfPreviousPoint], originalCols[idxOfPreviousPoint]};
     ControlPoint nextControlPoint{originalRows[idxOfNextPoint], originalCols[idxOfNextPoint]};
@@ -136,11 +155,11 @@ CurveControlPointSmoothing::optimizeCurve(PolygonSide* coordinateData, const Pat
         }
         __syncthreads();
 
-        originalRows[idxOfPoint] = newVersionOfControlPoint.row;
-        originalCols[idxOfPoint] = newVersionOfControlPoint.col;
+        originalRows[idxOfPointInBlock] = newVersionOfControlPoint.row;
+        originalCols[idxOfPointInBlock] = newVersionOfControlPoint.col;
         __syncthreads();
 
-        controlPointToModify = ControlPoint{originalRows[idxOfPoint], originalCols[idxOfPoint]};
+        controlPointToModify = ControlPoint{originalRows[idxOfPointInBlock], originalCols[idxOfPointInBlock]};
         prev2xControlPoint = ControlPoint{originalRows[idxOf2xPreviousPoint], originalCols[idxOf2xPreviousPoint]};
         prevControlPoint = ControlPoint{originalRows[idxOfPreviousPoint], originalCols[idxOfPreviousPoint]};
         nextControlPoint = ControlPoint{originalRows[idxOfNextPoint], originalCols[idxOfNextPoint]};
@@ -154,7 +173,7 @@ CurveControlPointSmoothing::optimizeCurve(PolygonSide* coordinateData, const Pat
 
 
     setNewCoordinatesOfPathPoint(idxOfPoint, currentPathData, coordinateData, width,
-                                 height, originalRows, originalCols);
+                                 height, originalRows[idxOfPointInBlock], originalCols[idxOfPointInBlock]);
 }
 
 __device__ ControlPoint
@@ -172,8 +191,8 @@ CurveControlPointSmoothing::getRandomPointInNeighborhood(const ControlPoint& sou
 __device__ void
 CurveControlPointSmoothing::setNewCoordinatesOfPathPoint(const int& pointIdx, const PathPoint* pathData,
                                                          PolygonSide* coordinateData, unsigned int width,
-                                                         unsigned int height, Polygon::cord_type* sharedRows,
-                                                         Polygon::cord_type* sharedCols)
+                                                         unsigned int height, Polygon::cord_type resultRow,
+                                                         Polygon::cord_type resultCol)
 {
     const PathPoint& currentPathPoint = pathData[pointIdx];
     const int& coordinateDataRow = currentPathPoint.rowOfCoordinates;
@@ -183,13 +202,13 @@ CurveControlPointSmoothing::setNewCoordinatesOfPathPoint(const int& pointIdx, co
         unsigned int coordinateIdx = coordinateDataCol + coordinateDataRow * width;
         if( currentPathPoint.useBPoint )
         {
-            coordinateData[coordinateIdx].pointB[0] = sharedRows[pointIdx];
-            coordinateData[coordinateIdx].pointB[1] = sharedCols[pointIdx];
+            coordinateData[coordinateIdx].pointB[0] = resultRow;
+            coordinateData[coordinateIdx].pointB[1] = resultCol;
         }
         else
         {
-            coordinateData[coordinateIdx].pointA[0] = sharedRows[pointIdx];
-            coordinateData[coordinateIdx].pointA[1] = sharedCols[pointIdx];
+            coordinateData[coordinateIdx].pointA[0] = resultRow;
+            coordinateData[coordinateIdx].pointA[1] = resultCol;
         }
     }
 }
