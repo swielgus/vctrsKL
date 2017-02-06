@@ -32,4 +32,7 @@ target_link_libraries(CurveControlPointExcluding PolygonSide)
 cuda_add_library(CurveOptimizer CurveOptimizer.cu)
 target_link_libraries(CurveOptimizer PolygonSideMap CurveControlPointSmoothing CurveControlPointExcluding)
 
+cuda_add_library(ImageColorizer ImageColorizer.cpp)
+target_link_libraries(ImageColorizer PolygonSideMap)
+
 add_subdirectory(utils)

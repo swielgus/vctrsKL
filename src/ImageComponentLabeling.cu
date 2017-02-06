@@ -9,6 +9,7 @@ ImageComponentLabeling::areYUVColorsSimilar(const Color::byte& aY, const Color::
     const Color::byte thresholdV = 6;
 
     return abs(aY - bY) <= thresholdY && abs(aU - bU) <= thresholdU && abs(aV - bV) <= thresholdV;
+    //return (aY == bY) && (aU == bU) && (aV == bV);
 }
 
 __device__ int ImageComponentLabeling::findRootOfNodeLabel(int* labels, int current)

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <CurveOptimizer.hpp>
+#include <ImageColorizer.hpp>
 
 unsigned int getCoordinate(const PathPoint& pointData, const std::vector<PolygonSide>& coordinateData,
                            const int coordinateIdx, unsigned int widthOfImage, unsigned int heightOfImage)
@@ -33,7 +34,7 @@ bool isPointToBeAControlOne(const PathPoint& pointData, const std::vector<Polygo
 
 int main(int argc, char const *argv[])
 {
-    std::string filename = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/dolphin.png";
+    std::string filename = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/superMarioWorld.png";
     if(argc > 1)
         filename = argv[1];
 
@@ -46,9 +47,11 @@ int main(int argc, char const *argv[])
     graphOfTestedImage.resolveCrossings();
     PolygonSideMap testedPolyMap(graphOfTestedImage);
     CurveOptimizer testedCurveOptimizer(testedPolyMap);
+    ImageColorizer testedColorizer(testedPolyMap);
 
     auto coordinateData = testedPolyMap.getInternalSidesFromDevice();
     auto regionBoundaries = testedPolyMap.getPathPointBoundaries();
+    auto pointRegionIdxValues = testedColorizer.getPointRegionIdxValues();
     const auto& colorRepresentatives = testedPolyMap.getColorRepresentatives();
     const unsigned int widthOfImage = testedImage.getWidth();
     const unsigned int heightOfImage = testedImage.getHeight();
@@ -58,24 +61,29 @@ int main(int argc, char const *argv[])
     std::string pathDStart = "\n<path d=\"";
     std::string pathDEnd = " Z\"";
 
+    std::string defsStart = "\n<defs id=\"defs19878\">";
+    std::string defsEnd = "\n</defs>";
+    std::string filtersSection = "\n<filter id=\"myGauBlurFil\">\n    <feColorMatrix type=\"matrix\"\n    values=\"1 0 0 0 0\n            0 1 0 0 0\n            0 0 1 0 0\n            0 0 0 1 0 \"/>\n</filter>\n<filter id=\"myGauBlurFilTEMP\"\n    x=\"-50%\" y=\"-50%\" width=\"200%\" height=\"200%\">\n    <feGaussianBlur in=\"SourceGraphic\" stdDeviation=\"50\" id=\"feGaussianBlur7805\" />\n</filter>";
+    std::string clipPathStart = "\n    <clipPath id=\"clip";
+    std::string clipPathEnd = "\n    </clipPath>";
+
     std::string pathFillStart = " fill=\"rgb(";
     std::string pathFillEnd = ")\"";
-    std::string pathEnd = " />";
+    std::string segmentEnd = " />";
+
     std::string outputEnd = "</svg>";
 
-    std::ofstream ofs (outputName, std::ofstream::out);
-
-    ofs << outputHeader;
+    std::vector<std::string> pathTexts;
+    pathTexts.resize(regionBoundaries.size());
     for(int i = 0; i < regionBoundaries.size(); ++i)
     {
         const auto& path = regionBoundaries[i];
-        ofs << pathDStart;
+        std::string thisPathText = pathDStart;
         bool isItTheStartOfPath = true;
         for(int j = 0; j < path.size(); ++j)
         {
             int usedControlPointIdx = (j+1) % path.size();
             int followingControlPointIdx = (j+2) % path.size();
-
 
             const PathPoint& precedingControlPoint = path[j];
             const PathPoint& usedControlPoint = path[usedControlPointIdx];
@@ -95,31 +103,92 @@ int main(int argc, char const *argv[])
             if(isItTheStartOfPath)
             {
                 isItTheStartOfPath = false;
-                ofs << " M" << colOfCurveStartPoint << "," << rowOfCurveStartPoint;
+                thisPathText += " M";
+                thisPathText += std::to_string(colOfCurveStartPoint) + "," + std::to_string(rowOfCurveStartPoint);
             }
 
             if( isPointToBeAControlOne(usedControlPoint, coordinateData, widthOfImage, heightOfImage) )
             {
-                ofs << " Q"
-                    << curCCol << "," << curCRow << " "
-                    << colOfCurveEndPoint << "," << rowOfCurveEndPoint;
+                thisPathText += " Q" + std::to_string(curCCol) + "," + std::to_string(curCRow) + " "
+                              + std::to_string(colOfCurveEndPoint) + "," + std::to_string(rowOfCurveEndPoint);
             }
             else
             {
-                ofs << " L"
-                    << curCCol << "," << curCRow << " L"
-                    << colOfCurveEndPoint << "," << rowOfCurveEndPoint;
+                thisPathText += " L"
+                    + std::to_string(curCCol) + "," + std::to_string(curCRow) + " L"
+                    + std::to_string(colOfCurveEndPoint) + "," + std::to_string(rowOfCurveEndPoint);
             }
-
         }
-        //ofs << pathDEnd << " fill=\"none\" stroke=\"#000\" stroke-width=\"5\" " << pathEnd;
+        thisPathText += pathDEnd;
+        pathTexts[i] = thisPathText;
+    }
+
+    std::ofstream ofs (outputName, std::ofstream::out);
+    ofs << outputHeader << defsStart << filtersSection;
+    for(int i = 0; i < regionBoundaries.size(); ++i)
+    {
+        ofs << clipPathStart << i << "\">";
+        ofs << pathTexts[i] + segmentEnd;
+        ofs << clipPathEnd;
+    }
+    ofs << defsEnd;
+
+    for(int i = 0; i < regionBoundaries.size(); ++i)
+    {
+        std::string nameOfRegion = "#clip" + std::to_string(i);
+        int rowToGetColorFrom = colorRepresentatives[i].X;
+        int colToGetColorFrom = colorRepresentatives[i].Y;
+        const auto representativeRed = testedImage.getPixelRed(rowToGetColorFrom, colToGetColorFrom);
+        const auto representativeGreen = testedImage.getPixelGreen(rowToGetColorFrom, colToGetColorFrom);
+        const auto representativeBlue = testedImage.getPixelBlue(rowToGetColorFrom, colToGetColorFrom);
+
+        ofs << pathTexts[i] + " clip-path=\"url(" + nameOfRegion + ")\"" + pathFillStart +
+               std::to_string(+representativeRed) + "," + std::to_string(+representativeGreen) + "," +
+               std::to_string(+representativeBlue) + pathFillEnd + segmentEnd;
+
+        for(int row = 0; row < heightOfImage; ++row)
+        for(int col = 0; col < widthOfImage; ++col)
+        {
+            const auto& regionIdxOfThisPoint = pointRegionIdxValues[row][col];
+            if(i == regionIdxOfThisPoint)
+            {
+                std::string nameOfRegion = "#clip" + std::to_string(regionIdxOfThisPoint);
+                const auto red = testedImage.getPixelRed(row, col);
+                const auto green = testedImage.getPixelGreen(row, col);
+                const auto blue = testedImage.getPixelBlue(row, col);
+                int rowToGetColorFrom = colorRepresentatives[regionIdxOfThisPoint].X;
+                int colToGetColorFrom = colorRepresentatives[regionIdxOfThisPoint].Y;
+                const auto representativeRed = testedImage.getPixelRed(rowToGetColorFrom, colToGetColorFrom);
+                const auto representativeGreen = testedImage.getPixelGreen(rowToGetColorFrom, colToGetColorFrom);
+                const auto representativeBlue = testedImage.getPixelBlue(rowToGetColorFrom, colToGetColorFrom);
+
+                if(red != representativeRed && green != representativeGreen && blue != representativeBlue)
+                {
+                    ofs << "\n    <circle style=\"display:inline; filter:url(#myGauBlurFilTEMP); clip-path: url(" << nameOfRegion
+                        << ");\"" << pathFillStart << +red
+                        << "," << +green << "," << +blue << pathFillEnd
+                        << " cx=\"" << col * 100 + 50 << "\" cy=\"" << row * 100 + 50 << "\" r=\"80\" "
+                        << " clip-path=\"url(" << nameOfRegion << ")\"" << "/>";
+                }
+            }
+        }
+    }
+
+
+
+
+    /*for(int i = 0; i < regionBoundaries.size(); ++i)
+    {
+        const auto& path = regionBoundaries[i];
+
+        //ofs << pathDEnd << " fill=\"none\" stroke=\"#000\" stroke-width=\"5\" " << segmentEnd;
 
         int rowToGetColorFrom = colorRepresentatives[i].X;
         int colToGetColorFrom = colorRepresentatives[i].Y;
         ofs << pathDEnd << pathFillStart << +testedImage.getPixelRed(rowToGetColorFrom, colToGetColorFrom)
             << "," << +testedImage.getPixelGreen(rowToGetColorFrom, colToGetColorFrom)
-            << "," << +testedImage.getPixelBlue(rowToGetColorFrom, colToGetColorFrom) << pathFillEnd << pathEnd;
-    }
+            << "," << +testedImage.getPixelBlue(rowToGetColorFrom, colToGetColorFrom) << pathFillEnd << segmentEnd;
+    }*/
 
     ofs << outputEnd;
     ofs.close();

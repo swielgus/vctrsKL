@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include "CurveOptimizer.hpp"
+#include <ImageColorizer.hpp>
 
 int main()
 {
@@ -19,6 +20,9 @@ int main()
     auto curveOptimizerStart = std::chrono::steady_clock::now();
     CurveOptimizer testedCurveOptimizer(testedPolyMap);
     auto curveOptimizerEnd = std::chrono::steady_clock::now() - curveOptimizerStart;
+    auto imageColorizerStart = std::chrono::steady_clock::now();
+    ImageColorizer testedColorizer(testedPolyMap);
+    auto imageColorizerEnd = std::chrono::steady_clock::now() - imageColorizerStart;
 
     std::cout   << "\nTime measured: "
                 << "\n ImageData: \t\t "
@@ -37,6 +41,10 @@ int main()
                 << std::chrono::duration_cast< std::chrono::nanoseconds >(curveOptimizerEnd).count() << " nanoseconds = "
                 << std::chrono::duration_cast< std::chrono::microseconds >(curveOptimizerEnd).count() << " microseconds = "
                 << std::chrono::duration_cast< std::chrono::milliseconds >(curveOptimizerEnd).count() << " milliseconds"
+                << "\n ImageColorizer: \t "
+                << std::chrono::duration_cast< std::chrono::nanoseconds >(imageColorizerEnd).count() << " nanoseconds = "
+                << std::chrono::duration_cast< std::chrono::microseconds >(imageColorizerEnd).count() << " microseconds = "
+                << std::chrono::duration_cast< std::chrono::milliseconds >(imageColorizerEnd).count() << " milliseconds"
               << "\n";
     return 0;
 }

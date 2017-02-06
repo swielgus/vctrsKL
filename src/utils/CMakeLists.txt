@@ -1,13 +1,10 @@
 include_directories(${CMAKE_SOURCE_DIR}/src/)
 
 add_executable(utilImgTimeMeasuring imgTimeMeasuring.cpp)
-target_link_libraries(utilImgTimeMeasuring CurveOptimizer)
+target_link_libraries(utilImgTimeMeasuring CurveOptimizer ImageColorizer)
 
 add_executable(utilDrawRegions regionDrawing.cpp)
 target_link_libraries(utilDrawRegions PolygonSideMap)
 
-add_executable(utilDrawUnoptimizedCurves unoptimCurveDrawing.cpp)
-target_link_libraries(utilDrawUnoptimizedCurves PolygonSideMap)
-
 add_executable(utilDrawPrototypeCurves prototypeCurveDrawing.cpp)
-target_link_libraries(utilDrawPrototypeCurves CurveOptimizer)
+target_link_libraries(utilDrawPrototypeCurves CurveOptimizer ImageColorizer)
