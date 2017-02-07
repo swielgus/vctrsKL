@@ -23,7 +23,7 @@ bool isPointToBeAControlOne(const PathPoint& pointData, const std::vector<Polygo
                             unsigned int widthOfImage, unsigned int heightOfImage)
 {
     if(pointData.rowOfCoordinates == heightOfImage || pointData.colOfCoordinates == widthOfImage ||
-       (pointData.rowOfCoordinates == 0 && pointData.colOfCoordinates == 0))
+       pointData.rowOfCoordinates == 0 || pointData.colOfCoordinates == 0)
     {
         return false;
     }
@@ -34,7 +34,7 @@ bool isPointToBeAControlOne(const PathPoint& pointData, const std::vector<Polygo
 
 int main(int argc, char const *argv[])
 {
-    std::string filename = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/superMarioWorld.png";
+    std::string filename = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/dolphin.png";
     if(argc > 1)
         filename = argv[1];
 
@@ -162,14 +162,14 @@ int main(int argc, char const *argv[])
                 const auto representativeGreen = testedImage.getPixelGreen(rowToGetColorFrom, colToGetColorFrom);
                 const auto representativeBlue = testedImage.getPixelBlue(rowToGetColorFrom, colToGetColorFrom);
 
-                if(red != representativeRed && green != representativeGreen && blue != representativeBlue)
+                /*if(red != representativeRed && green != representativeGreen && blue != representativeBlue)
                 {
                     ofs << "\n    <circle style=\"display:inline; filter:url(#myGauBlurFilTEMP); clip-path: url(" << nameOfRegion
                         << ");\"" << pathFillStart << +red
                         << "," << +green << "," << +blue << pathFillEnd
                         << " cx=\"" << col * 100 + 50 << "\" cy=\"" << row * 100 + 50 << "\" r=\"80\" "
                         << " clip-path=\"url(" << nameOfRegion << ")\"" << "/>";
-                }
+                }*/
             }
         }
     }

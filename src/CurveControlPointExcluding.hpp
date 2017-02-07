@@ -26,6 +26,8 @@ __device__ int getRowDiffValueOfPattern(const CornerPatternEdge& patternEdge);
 __device__ int getColDiffValueOfPattern(const CornerPatternEdge& patternEdge);
 __device__ bool isPointOnIllegalImageBoundary(int idxOfPoint, const PathPoint* pathData,
                                               unsigned int width, unsigned int height);
+__device__ bool doesPointHaveDegreeBiggerThanTwo(int idxOfPoint, const PathPoint& currentPathPoint,
+                                                 PolygonSide* coordinateData, unsigned int width);
 
 __host__ void allocateCornerPatternData();
 }

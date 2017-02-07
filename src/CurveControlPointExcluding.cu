@@ -34,7 +34,8 @@ __global__ void CurveControlPointExcluding::verifyWhichPointsAreToBeIgnored(Poly
     __syncthreads();
 
     const PathPoint& currentPathPoint = currentPathData[idxOfPoint];
-    if(isPointOnIllegalImageBoundary(idxOfPoint, currentPathData, width, height))
+    if(isPointOnIllegalImageBoundary(idxOfPoint, currentPathData, width, height)
+       /*|| doesPointHaveDegreeBiggerThanTwo(idxOfPoint, currentPathPoint, coordinateData, width)*/ )
     {
         currentPathOmittingData[idxOfPoint] = true;
         return;
@@ -97,6 +98,19 @@ __global__ void CurveControlPointExcluding::verifyWhichPointsAreToBeIgnored(Poly
         currentPathOmittingData[idxOfPointD] = true;
         currentPathOmittingData[idxOfPointE] = true;
     }
+}
+
+__device__ bool
+CurveControlPointExcluding::doesPointHaveDegreeBiggerThanTwo(int idxOfPoint, const PathPoint& currentPathPoint,
+                                                             PolygonSide* coordinateData, unsigned int width)
+{
+    const int& coordinateDataRow = currentPathPoint.rowOfCoordinates;
+    const int& coordinateDataCol = currentPathPoint.colOfCoordinates;
+    unsigned int coordinateIdx = coordinateDataCol + coordinateDataRow * width;
+    if( currentPathPoint.useBPoint )
+        return ((coordinateData[coordinateIdx].info & 28) >> 5) > 2;
+    else
+        return ((coordinateData[coordinateIdx].info & 224) >> 5) > 2;
 }
 
 __device__ bool CurveControlPointExcluding::isPointOnIllegalImageBoundary(int idxOfPoint, const PathPoint* pathData,
