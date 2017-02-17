@@ -10,7 +10,8 @@ public:
     using edge_type = Graph::byte;
 
     PixelGraph() = delete;
-    PixelGraph(const ImageData& image);
+    PixelGraph(const ImageData& image, int islandMultiplier = 5, int curveMultiplier = 1,
+               int pixelsMultiplier = 1, int pixelsRadius = 3);
     ~PixelGraph();
 
     void resolveCrossings();
@@ -22,6 +23,10 @@ public:
 private:
     const ImageData& sourceImage;
     edge_type* d_pixelConnections;
+    int islandHeuristicMultiplier;
+    int curveHeuristicMultiplier;
+    int sparsePixelsMultiplier;
+    int sparsePixelsRadius;
 
     void freeDeviceData();
     void constructGraph();

@@ -207,7 +207,9 @@ __device__ int GraphCrossResolving::getSizeOfConnectedComponent(int row, int col
 }
 
 __global__ void GraphCrossResolving::resolveCriticalCrossings(Graph::byte* edges, const int* labelData, int width,
-                                                              int height)
+                                                              int height, const int islandHeuristicMultiplier,
+                                                              const int curveHeuristicMultiplier,
+                                                              const int sparsePixelsMultiplier, const int sparsePixelsRadius)
 {
     int row = threadIdx.x + (blockIdx.x * blockDim.x);
     int col = threadIdx.y + (blockIdx.y * blockDim.y);
@@ -222,12 +224,6 @@ __global__ void GraphCrossResolving::resolveCriticalCrossings(Graph::byte* edges
         {
             int weightOfDiagonalLeftURightD = 0;
             int weightOfDiagonalLeftDRightU = 0;
-
-            //TODO make heuristic multipliers externally configurable
-            const int islandHeuristicMultiplier = 5;
-            const int curveHeuristicMultiplier = 1;
-            const int sparsePixelsMultiplier = 1;
-            const int sparsePixelsRadius = 3;
 
             //island heuristic
             weightOfDiagonalLeftURightD +=

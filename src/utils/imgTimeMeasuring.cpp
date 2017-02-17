@@ -29,7 +29,7 @@ int main(int argc, char const *argv[])
     ImageColorizer testedColorizer(testedPolyMap);
     auto imageColorizerEnd = std::chrono::steady_clock::now() - imageColorizerStart;
 
-    /*std::cout   << "\nTime measured: "
+    std::cout   << "\nTime measured: "
                 << "\n ImageData: \t\t "
                 << std::chrono::duration_cast< std::chrono::nanoseconds >(imageDataEnd).count() << " nanoseconds = "
                 << std::chrono::duration_cast< std::chrono::microseconds >(imageDataEnd).count() << " microseconds = "
@@ -54,12 +54,12 @@ int main(int argc, char const *argv[])
                 << std::chrono::duration_cast< std::chrono::nanoseconds >(imageColorizerEnd).count() << " nanoseconds = "
                 << std::chrono::duration_cast< std::chrono::microseconds >(imageColorizerEnd).count() << " microseconds = "
                 << std::chrono::duration_cast< std::chrono::milliseconds >(imageColorizerEnd).count() << " milliseconds"
-              << "\n";*/
+              << "\n";
 
-    std::cout   << "\n" << std::chrono::duration_cast< std::chrono::milliseconds >(imageDataProcessingEnd).count()
+    /*std::cout   << "\n" << std::chrono::duration_cast< std::chrono::milliseconds >(imageDataProcessingEnd).count()
                            + std::chrono::duration_cast< std::chrono::milliseconds >(graphDataEnd).count()
                         << "," << std::chrono::duration_cast< std::chrono::milliseconds >(polygonMapEnd).count()
                         << "," << std::chrono::duration_cast< std::chrono::milliseconds >(curveOptimizerEnd).count()
-                               + std::chrono::duration_cast< std::chrono::milliseconds >(imageColorizerEnd).count();
+                               + std::chrono::duration_cast< std::chrono::milliseconds >(imageColorizerEnd).count();*/
     return 0;
 }

@@ -2,8 +2,11 @@
 #include "GraphCrossResolving.hpp"
 #include "GraphConstructing.hpp"
 
-PixelGraph::PixelGraph(const ImageData& image)
-    : sourceImage{image}, d_pixelConnections{nullptr}
+PixelGraph::PixelGraph(const ImageData& image, int islandMultiplier, int curveMultiplier,
+                       int pixelsMultiplier, int pixelsRadius)
+    : sourceImage{image}, d_pixelConnections{nullptr}, islandHeuristicMultiplier{islandMultiplier},
+      curveHeuristicMultiplier{curveMultiplier}, sparsePixelsMultiplier{pixelsMultiplier},
+      sparsePixelsRadius{pixelsRadius}
 {
     constructGraph();
 }
@@ -101,7 +104,9 @@ void PixelGraph::resolveCrossings()
     dim3 dimBlock(32, 32);
     dim3 dimGrid((height + dimBlock.x -1)/dimBlock.x, (width + dimBlock.y -1)/dimBlock.y);
 
-    GraphCrossResolving::resolveCriticalCrossings<<<dimGrid, dimBlock>>>(d_pixelConnections, sourceImage.getGPUAddressOfLabelData(), width, height);
+    GraphCrossResolving::resolveCriticalCrossings<<<dimGrid, dimBlock>>>(
+        d_pixelConnections, sourceImage.getGPUAddressOfLabelData(), width, height, islandHeuristicMultiplier,
+        curveHeuristicMultiplier, sparsePixelsMultiplier, sparsePixelsRadius);
     cudaDeviceSynchronize();
 
     //TODO (opt) update labels after disconnecting components via crossing resolving

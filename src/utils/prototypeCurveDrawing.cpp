@@ -34,7 +34,7 @@ bool isPointToBeAControlOne(const PathPoint& pointData, const std::vector<Polygo
 
 int main(int argc, char const *argv[])
 {
-    std::string filename = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/rickdan.png";
+    std::string filename = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/dolphin.png";
     if(argc > 1)
         filename = argv[1];
 
@@ -42,8 +42,15 @@ int main(int argc, char const *argv[])
     if(argc > 2)
         outputName = argv[2];
 
+    //TODO make heuristic multipliers externally configurable
+    const int islandHeuristicMultiplier = 5;
+    const int curveHeuristicMultiplier = 1;
+    const int sparsePixelsMultiplier = 1;
+    const int sparsePixelsRadius = 3;
+
     ImageData testedImage(filename);
-    PixelGraph graphOfTestedImage(testedImage);
+    PixelGraph graphOfTestedImage(testedImage, islandHeuristicMultiplier, curveHeuristicMultiplier,
+                                  sparsePixelsMultiplier, sparsePixelsRadius);
     graphOfTestedImage.resolveCrossings();
     PolygonSideMap testedPolyMap(graphOfTestedImage);
     CurveOptimizer testedCurveOptimizer(testedPolyMap);

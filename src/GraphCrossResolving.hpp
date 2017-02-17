@@ -24,7 +24,9 @@ namespace GraphCrossResolving
     __device__ int getSizeOfConnectedComponent(int row, int col, GraphEdge secondaryNodeDirection,
                                                const int radius, const int* labelData, int width, int height);
 
-    __global__ void resolveCriticalCrossings(Graph::byte* edges, const int* labelData, int width, int height);
+    __global__ void resolveCriticalCrossings(Graph::byte* edges, const int* labelData, int width, int height,
+                                             const int islandHeuristicMultiplier, const int curveHeuristicMultiplier,
+                                             const int sparsePixelsMultiplier, const int sparsePixelsRadius);
 }
 
 #endif //VCTRSKL_GRAPHCROSSRESOLVING_HPP
