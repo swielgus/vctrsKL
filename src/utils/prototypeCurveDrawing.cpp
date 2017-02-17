@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <popt.h>
 #include <CurveOptimizer.hpp>
 #include <ImageColorizer.hpp>
 
@@ -32,21 +33,41 @@ bool isPointToBeAControlOne(const PathPoint& pointData, const std::vector<Polygo
     return (degreeOfPoint < 3);
 }
 
+char* outputParameter;
+int islandHeuristicMultiplier = 5;
+int curveHeuristicMultiplier = 1;
+int sparsePixelsMultiplier = 1;
+int sparsePixelsRadius = 3;
+
+poptOption programOptions[] = {
+        { "output", 'o', POPT_ARG_STRING, &outputParameter, 0, "Output SVG file location", "FILENAME" },
+        { "island", 'i', POPT_ARG_INT, &islandHeuristicMultiplier, 0, "Weight of island heuristic", "WEIGHT"},
+        { "curves", 'c', POPT_ARG_INT, &curveHeuristicMultiplier, 0, "Multiplier of curve heuristic", "MULTIPLIER"},
+        { "sparse-pixels", 'p', POPT_ARG_INT, &sparsePixelsMultiplier, 0, "Multiplier of sparse pixel heuristic",
+          "MULTIPLIER"},
+        { "sparse-pixels-radius", 'r', POPT_ARG_INT, &sparsePixelsRadius, 0, "Radius of sparse pixel checking window",
+          "RADIUS"},
+        POPT_AUTOHELP
+        POPT_TABLEEND
+};
+
 int main(int argc, char const *argv[])
 {
-    std::string filename = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/dolphin.png";
-    if(argc > 1)
-        filename = argv[1];
+    if(argc < 2)
+    {
+        std::cerr << "No file name given!" << std::endl;
+        return EXIT_FAILURE;
+    }
 
-    std::string outputName = "/home/sw/studia2016-2017Z/pracaMagisterska/conv/utilCreated/curve_out.svg";
-    if(argc > 2)
-        outputName = argv[2];
+    poptContext optionsContext = poptGetContext(nullptr, argc, argv, programOptions, 0);
+    poptGetNextOpt(optionsContext);
+    std::string filename = poptGetArg(optionsContext);
+    std::string outputName;
 
-    //TODO make heuristic multipliers externally configurable
-    const int islandHeuristicMultiplier = 5;
-    const int curveHeuristicMultiplier = 1;
-    const int sparsePixelsMultiplier = 1;
-    const int sparsePixelsRadius = 3;
+    if((outputParameter == NULL))
+        outputName = filename + ".svg";
+    else
+        outputName = outputParameter;
 
     ImageData testedImage(filename);
     PixelGraph graphOfTestedImage(testedImage, islandHeuristicMultiplier, curveHeuristicMultiplier,
@@ -199,5 +220,8 @@ int main(int argc, char const *argv[])
 
     ofs << outputEnd;
     ofs.close();
+
+    poptFreeContext(optionsContext);
+    delete[] outputParameter;
     return 0;
 }
