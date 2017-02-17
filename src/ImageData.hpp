@@ -11,9 +11,10 @@ public:
     using color_type = Color::byte;
 
     ImageData();
-    ImageData(std::string filename);
+    ImageData(std::string filename, bool performImageProcessing = true);
     ~ImageData();
 
+    void processImage();
     void processImage(std::string filename);
 
     unsigned int getWidth() const;

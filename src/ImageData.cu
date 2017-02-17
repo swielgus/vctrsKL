@@ -70,6 +70,13 @@ const ImageData::color_type& ImageData::getPixelV(unsigned int row, unsigned int
     return getColorData(colorsYUV, row, col, 2);
 }
 
+void ImageData::processImage()
+{
+    convertToYUVLocally();
+    allocateYUVPixelDataOnDevice();
+    createLabelsForSimilarPixels();
+}
+
 void ImageData::processImage(std::string filename)
 {
     this->loadImage(filename);
@@ -78,10 +85,13 @@ void ImageData::processImage(std::string filename)
     createLabelsForSimilarPixels();
 }
 
-ImageData::ImageData(std::string filename)
+ImageData::ImageData(std::string filename, bool performImageProcessing)
         : colorsRGB{}, imageWidth{0}, imageHeight{0}, d_colorYUVData{nullptr}, d_componentLabels{nullptr}, colorsYUV{}
 {
-    processImage(filename);
+    if(performImageProcessing)
+        processImage(filename);
+    else
+        this->loadImage(filename);
 }
 
 ImageData::ImageData()
