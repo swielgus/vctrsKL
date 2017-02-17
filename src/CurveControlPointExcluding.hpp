@@ -10,7 +10,7 @@ __constant__ __device__ CornerPatternEdge cornerPatterns[25*4];
 
 __global__ void verifyWhichPointsAreToBeIgnored(PolygonSide* coordinateData, const PathPoint* pathData,
                                                 bool* omitPoint, const unsigned int pathOffset, unsigned int width,
-                                                unsigned int height, int pathLength);
+                                                unsigned int height, int pathLength, bool excludeTJunctions);
 __device__ const Polygon::cord_type* getCoordinatesOfPathPoint(const int& pointIdx, const PathPoint* pathData,
                                                                PolygonSide* coordinateData, unsigned int width);
 __device__ int getIdxOfRelativePoint(const int& source, int steps, const int& pathLength);

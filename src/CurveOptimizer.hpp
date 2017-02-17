@@ -8,7 +8,7 @@ class CurveOptimizer
 {
 public:
     CurveOptimizer() = delete;
-    CurveOptimizer(PolygonSideMap& usedSideMap);
+    CurveOptimizer(PolygonSideMap& usedSideMap, bool doNotOptimizeTJunctions = false);
     ~CurveOptimizer();
 private:
     unsigned int                         imageWidth;
@@ -18,6 +18,7 @@ private:
     std::vector<unsigned int>            pathAddressOffsets;
     PathPoint*                           d_pathPointData;
     bool*                                d_omitPointDuringOptimization;
+    bool                                 excludeTJunctions;
 
     void allocatePathPointDataOnDevice();
     void optimizeEnergyInAllPaths();

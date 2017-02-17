@@ -7,7 +7,7 @@ __global__ void CurveControlPointExcluding::verifyWhichPointsAreToBeIgnored(Poly
                                                                             bool* omitPoint,
                                                                             const unsigned int pathOffset,
                                                                             unsigned int width, unsigned int height,
-                                                                            int pathLength)
+                                                                            int pathLength, bool excludeTJunctions)
 {
     int idxOfPoint = blockIdx.x * blockDim.x + threadIdx.x;
     if(idxOfPoint >= pathLength)
@@ -35,7 +35,7 @@ __global__ void CurveControlPointExcluding::verifyWhichPointsAreToBeIgnored(Poly
 
     const PathPoint& currentPathPoint = currentPathData[idxOfPoint];
     if(isPointOnIllegalImageBoundary(idxOfPoint, currentPathData, width, height)
-       /*|| doesPointHaveDegreeBiggerThanTwo(idxOfPoint, currentPathPoint, coordinateData, width)*/ )
+       || (excludeTJunctions && doesPointHaveDegreeBiggerThanTwo(idxOfPoint, currentPathPoint, coordinateData, width)) )
     {
         currentPathOmittingData[idxOfPoint] = true;
         return;

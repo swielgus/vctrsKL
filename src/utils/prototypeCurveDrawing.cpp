@@ -38,15 +38,31 @@ int islandHeuristicMultiplier = 5;
 int curveHeuristicMultiplier = 1;
 int sparsePixelsMultiplier = 1;
 int sparsePixelsRadius = 3;
+int omitTJunctionsDuringOptimization = 0;
+int doNotPaintGaussCircles = 0;
+
+enum OutputType
+{
+    REGIONS = 1,
+    UNOPTIMIZED_CURVES,
+    OPTIMIZED_CURVES
+} outputType = OPTIMIZED_CURVES;
 
 poptOption programOptions[] = {
         { "output", 'o', POPT_ARG_STRING, &outputParameter, 0, "Output SVG file location", "FILENAME" },
-        { "island", 'i', POPT_ARG_INT, &islandHeuristicMultiplier, 0, "Weight of island heuristic", "WEIGHT"},
-        { "curves", 'c', POPT_ARG_INT, &curveHeuristicMultiplier, 0, "Multiplier of curve heuristic", "MULTIPLIER"},
-        { "sparse-pixels", 'p', POPT_ARG_INT, &sparsePixelsMultiplier, 0, "Multiplier of sparse pixel heuristic",
+        {"paint-regions",'v', POPT_ARG_VAL, &outputType, REGIONS, "Paint recognized pixel polygon regions", NULL},
+        {"paint-unoptimized", 'u', POPT_ARG_VAL, &outputType, UNOPTIMIZED_CURVES,
+         "Paint regions bounded by unoptimized curves", NULL},
+        {"paint-optimized",'s', POPT_ARG_VAL, &outputType, OPTIMIZED_CURVES,
+         "Paint regions bounded by optimized curves (default)", NULL},
+        { "island", 'i', POPT_ARG_INT, &islandHeuristicMultiplier, 0, "Weight of island heuristic (default: 5)", "WEIGHT"},
+        { "curves", 'c', POPT_ARG_INT, &curveHeuristicMultiplier, 0, "Multiplier of curve heuristic (default: 1)", "MULTIPLIER"},
+        { "sparse-pixels", 'p', POPT_ARG_INT, &sparsePixelsMultiplier, 0, "Multiplier of sparse pixel heuristic (default: 1)",
           "MULTIPLIER"},
-        { "sparse-pixels-radius", 'r', POPT_ARG_INT, &sparsePixelsRadius, 0, "Radius of sparse pixel checking window",
+        { "sparse-pixels-radius", 'r', POPT_ARG_INT, &sparsePixelsRadius, 0, "Radius of sparse pixel checking window (default: 3)",
           "RADIUS"},
+        { "omit-junctions", 'j', 0, &omitTJunctionsDuringOptimization, 0, "Do not optimize T-junctions" },
+        { "no-gauss", 'g', 0, &doNotPaintGaussCircles, 0, "Do not paint gaussian blobs" },
         POPT_AUTOHELP
         POPT_TABLEEND
 };
@@ -74,7 +90,8 @@ int main(int argc, char const *argv[])
                                   sparsePixelsMultiplier, sparsePixelsRadius);
     graphOfTestedImage.resolveCrossings();
     PolygonSideMap testedPolyMap(graphOfTestedImage);
-    CurveOptimizer testedCurveOptimizer(testedPolyMap);
+    if(outputType != UNOPTIMIZED_CURVES && outputType == OPTIMIZED_CURVES)
+        CurveOptimizer testedCurveOptimizer(testedPolyMap, static_cast<bool>(omitTJunctionsDuringOptimization));
     ImageColorizer testedColorizer(testedPolyMap);
 
     auto coordinateData = testedPolyMap.getInternalSidesFromDevice();
@@ -135,7 +152,9 @@ int main(int argc, char const *argv[])
                 thisPathText += std::to_string(colOfCurveStartPoint) + "," + std::to_string(rowOfCurveStartPoint);
             }
 
-            if( isPointToBeAControlOne(usedControlPoint, coordinateData, widthOfImage, heightOfImage) )
+            bool doNotPaintCurves = (outputType == REGIONS);
+
+            if( !doNotPaintCurves && isPointToBeAControlOne(usedControlPoint, coordinateData, widthOfImage, heightOfImage) )
             {
                 thisPathText += " Q" + std::to_string(curCCol) + "," + std::to_string(curCRow) + " "
                               + std::to_string(colOfCurveEndPoint) + "," + std::to_string(rowOfCurveEndPoint);
@@ -190,13 +209,16 @@ int main(int argc, char const *argv[])
                 const auto representativeGreen = testedImage.getPixelGreen(rowToGetColorFrom, colToGetColorFrom);
                 const auto representativeBlue = testedImage.getPixelBlue(rowToGetColorFrom, colToGetColorFrom);
 
-                if(red != representativeRed && green != representativeGreen && blue != representativeBlue)
+                if(!doNotPaintGaussCircles)
                 {
-                    ofs << "\n    <circle style=\"display:inline; filter:url(#myGauBlurFilTEMP); clip-path: url(" << nameOfRegion
-                        << ");\"" << pathFillStart << +red
-                        << "," << +green << "," << +blue << pathFillEnd
-                        << " cx=\"" << col * 100 + 50 << "\" cy=\"" << row * 100 + 50 << "\" r=\"80\" "
-                        << " clip-path=\"url(" << nameOfRegion << ")\"" << "/>";
+                    if(red != representativeRed && green != representativeGreen && blue != representativeBlue)
+                    {
+                        ofs << "\n    <circle style=\"display:inline; filter:url(#myGauBlurFilTEMP); clip-path: url(" << nameOfRegion
+                            << ");\"" << pathFillStart << +red
+                            << "," << +green << "," << +blue << pathFillEnd
+                            << " cx=\"" << col * 100 + 50 << "\" cy=\"" << row * 100 + 50 << "\" r=\"80\" "
+                            << " clip-path=\"url(" << nameOfRegion << ")\"" << "/>";
+                    }
                 }
             }
         }

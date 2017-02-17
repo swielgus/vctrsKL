@@ -7,9 +7,10 @@
 #include "CurveControlPointSmoothing.hpp"
 #include "CurveControlPointExcluding.hpp"
 
-CurveOptimizer::CurveOptimizer(PolygonSideMap& usedSideMap)
+CurveOptimizer::CurveOptimizer(PolygonSideMap& usedSideMap, bool doNotOptimizeTJunctions)
     : imageWidth{usedSideMap.getImageWidth()}, imageHeight{usedSideMap.getImageHeight()}, d_coordinateData{nullptr},
-      usedPathPoints{}, pathAddressOffsets{}, d_pathPointData{nullptr}, d_omitPointDuringOptimization{nullptr}
+      usedPathPoints{}, pathAddressOffsets{}, d_pathPointData{nullptr}, d_omitPointDuringOptimization{nullptr},
+      excludeTJunctions{doNotOptimizeTJunctions}
 {
     d_coordinateData = usedSideMap.getGPUAddressOfPolygonCoordinateData();
     usedPathPoints = std::move(usedSideMap.getPathPointBoundaries());
@@ -39,7 +40,7 @@ void CurveOptimizer::checkWhichPointsAreToBeOmitted()
         CurveControlPointExcluding::verifyWhichPointsAreToBeIgnored
                 <<<numberOfBlocksForThisPath, numberOfThreadsPerBlock>>>
                 (d_coordinateData, d_pathPointData, d_omitPointDuringOptimization, addressOffsetOfPath, imageWidth,
-                 imageHeight, numberOfPathPoints);
+                 imageHeight, numberOfPathPoints, excludeTJunctions);
         cudaDeviceSynchronize();
     }
 }
