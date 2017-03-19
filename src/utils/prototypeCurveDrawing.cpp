@@ -61,8 +61,8 @@ poptOption programOptions[] = {
           "MULTIPLIER"},
         { "sparse-pixels-radius", 'r', POPT_ARG_INT, &sparsePixelsRadius, 0, "Radius of sparse pixel checking window (default: 3)",
           "RADIUS"},
-        { "omit-junctions", 'j', 0, &omitTJunctionsDuringOptimization, 0, "Do not optimize T-junctions" },
-        { "no-gauss", 'g', 0, &doNotPaintGaussCircles, 0, "Do not paint gaussian blobs" },
+        { "omit-junctions", 'j', 0, &omitTJunctionsDuringOptimization, 0, "Do not optimize T-junctions", NULL },
+        { "no-gauss", 'g', 0, &doNotPaintGaussCircles, 0, "Do not paint gaussian blobs", NULL },
         POPT_AUTOHELP
         POPT_TABLEEND
 };
@@ -81,7 +81,7 @@ int main(int argc, char const *argv[])
     std::string outputName;
 
     if((outputParameter == NULL))
-        outputName = filename + ".svg";
+        outputName = filename + "_o.svg";
     else
         outputName = outputParameter;
 
@@ -193,28 +193,29 @@ int main(int argc, char const *argv[])
                std::to_string(+representativeRed) + "," + std::to_string(+representativeGreen) + "," +
                std::to_string(+representativeBlue) + pathFillEnd + segmentEnd;
 
-        for(int row = 0; row < heightOfImage; ++row)
-        for(int col = 0; col < widthOfImage; ++col)
+        if(!doNotPaintGaussCircles)
         {
-            const auto& regionIdxOfThisPoint = pointRegionIdxValues[row][col];
-            if(i == regionIdxOfThisPoint)
+            for(int row = 0; row < heightOfImage; ++row)
+            for(int col = 0; col < widthOfImage; ++col)
             {
-                std::string nameOfRegion = "#clip" + std::to_string(regionIdxOfThisPoint);
-                const auto red = testedImage.getPixelRed(row, col);
-                const auto green = testedImage.getPixelGreen(row, col);
-                const auto blue = testedImage.getPixelBlue(row, col);
-                int rowToGetColorFrom = colorRepresentatives[regionIdxOfThisPoint].X;
-                int colToGetColorFrom = colorRepresentatives[regionIdxOfThisPoint].Y;
-                const auto representativeRed = testedImage.getPixelRed(rowToGetColorFrom, colToGetColorFrom);
-                const auto representativeGreen = testedImage.getPixelGreen(rowToGetColorFrom, colToGetColorFrom);
-                const auto representativeBlue = testedImage.getPixelBlue(rowToGetColorFrom, colToGetColorFrom);
-
-                if(!doNotPaintGaussCircles)
+                const auto& regionIdxOfThisPoint = pointRegionIdxValues[row][col];
+                if(i == regionIdxOfThisPoint)
                 {
+                    std::string nameOfRegion = "#clip" + std::to_string(regionIdxOfThisPoint);
+                    const auto red = testedImage.getPixelRed(row, col);
+                    const auto green = testedImage.getPixelGreen(row, col);
+                    const auto blue = testedImage.getPixelBlue(row, col);
+                    int rowToGetColorFrom = colorRepresentatives[regionIdxOfThisPoint].X;
+                    int colToGetColorFrom = colorRepresentatives[regionIdxOfThisPoint].Y;
+                    const auto representativeRed = testedImage.getPixelRed(rowToGetColorFrom, colToGetColorFrom);
+                    const auto representativeGreen = testedImage.getPixelGreen(rowToGetColorFrom,
+                                                                               colToGetColorFrom);
+                    const auto representativeBlue = testedImage.getPixelBlue(rowToGetColorFrom, colToGetColorFrom);
+
                     if(red != representativeRed && green != representativeGreen && blue != representativeBlue)
                     {
-                        ofs << "\n    <circle style=\"display:inline; filter:url(#myGauBlurFilTEMP); clip-path: url(" << nameOfRegion
-                            << ");\"" << pathFillStart << +red
+                        ofs << "\n    <circle style=\"display:inline; filter:url(#myGauBlurFilTEMP);\""
+                            << pathFillStart << +red
                             << "," << +green << "," << +blue << pathFillEnd
                             << " cx=\"" << col * 100 + 50 << "\" cy=\"" << row * 100 + 50 << "\" r=\"80\" "
                             << " clip-path=\"url(" << nameOfRegion << ")\"" << "/>";
@@ -223,22 +224,6 @@ int main(int argc, char const *argv[])
             }
         }
     }
-
-
-
-
-    /*for(int i = 0; i < regionBoundaries.size(); ++i)
-    {
-        const auto& path = regionBoundaries[i];
-
-        //ofs << pathDEnd << " fill=\"none\" stroke=\"#000\" stroke-width=\"5\" " << segmentEnd;
-
-        int rowToGetColorFrom = colorRepresentatives[i].X;
-        int colToGetColorFrom = colorRepresentatives[i].Y;
-        ofs << pathDEnd << pathFillStart << +testedImage.getPixelRed(rowToGetColorFrom, colToGetColorFrom)
-            << "," << +testedImage.getPixelGreen(rowToGetColorFrom, colToGetColorFrom)
-            << "," << +testedImage.getPixelBlue(rowToGetColorFrom, colToGetColorFrom) << pathFillEnd << segmentEnd;
-    }*/
 
     ofs << outputEnd;
     ofs.close();
