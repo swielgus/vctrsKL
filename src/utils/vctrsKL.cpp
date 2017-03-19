@@ -71,7 +71,7 @@ int main(int argc, char const *argv[])
 {
     if(argc < 2)
     {
-        std::cerr << "No file name given!" << std::endl;
+        std::cerr << "No file name given! Run with -? or --help parameter for help." << std::endl;
         return EXIT_FAILURE;
     }
 

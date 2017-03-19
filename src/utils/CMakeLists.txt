@@ -19,8 +19,5 @@ include_directories(${CMAKE_SOURCE_DIR}/src/ ${POPT_INCLUDE_DIR})
 add_executable(utilImgTimeMeasuring imgTimeMeasuring.cpp)
 target_link_libraries(utilImgTimeMeasuring CurveOptimizer ImageColorizer)
 
-add_executable(utilDrawRegions regionDrawing.cpp)
-target_link_libraries(utilDrawRegions PolygonSideMap)
-
-add_executable(utilDrawPrototypeCurves prototypeCurveDrawing.cpp)
-target_link_libraries(utilDrawPrototypeCurves CurveOptimizer ImageColorizer ${POPT_LIBRARY})
+add_executable(vctrsKL vctrsKL.cpp)
+target_link_libraries(vctrsKL CurveOptimizer ImageColorizer ${POPT_LIBRARY})
